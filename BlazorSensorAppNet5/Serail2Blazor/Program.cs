@@ -10,22 +10,42 @@ using Newtonsoft.Json;
 using static System.Net.Http.HttpClient;
 using System.Net.Http.Json;
 using System.Threading;
+using System.Configuration;
+
+//rEF: https://stackoverflow.com/questions/65110479/how-to-get-values-from-appsettings-json-in-a-console-application-using-net-core
+using Microsoft.Extensions.Configuration;
+using System.IO;
+// NuGet packages:
+// Microsoft.Extensions.Configuration.Binder
+// Microsoft.Extensions.Configuration.Jso
 
 namespace SerialBlazor
 {
     class Program
     {
+        static IConfigurationRoot configuration { get; set; }
+
         static SerialPort _serialPort;
-        const string defaultHost = @"https://localhost";
-        const int defaultPort = 44318;
+
         static string _host = "https://localhost:44318/";
         static int delay = 5;
         static bool isFirstRead = true;
         static string comport = "COM4";
-        static string baudrate = "9600";
+        static int baudrate = 9600;
         static void Main(string[] args)
         {
-            _host = $@"{defaultHost}:{defaultPort}/";
+            var builder = new ConfigurationBuilder()
+                            .SetBasePath(Directory.GetCurrentDirectory())
+                            .AddJsonFile("appsettings.json", optional: false);
+
+            IConfiguration configuration = builder.Build();
+            Settings settings = configuration.GetSection("AppSettings").Get<Settings>();
+
+            _host = $@"{settings.HOST}:{settings.PORT}/";
+            delay = settings.DELAY_SEC;
+            comport = settings.COM_PORT;
+            baudrate = settings.BAUD_RATE;
+
             Console.WriteLine("Hello World!");
             // Get a list of serial port names.
             string[] ports = SerialPort.GetPortNames();
@@ -35,23 +55,30 @@ namespace SerialBlazor
             {                
                 Console.WriteLine(_port);             
             }
+
             Console.Write("Port no: (Default COM4, x to use all defaults) ");
             string port = Console.ReadLine();
             if (port.ToLower() != "x")
             {
                 if (!string.IsNullOrEmpty(port))
                     comport = port;
-                Console.Write("baudrate: (Default 9600) ");
+
+                Console.Write($"baudrate: (Default: {baudrate}) ");
                 string newbaudrate = Console.ReadLine();
                 if (!string.IsNullOrEmpty(newbaudrate))
-                    baudrate = newbaudrate;
-                Console.Write("Time (in sec) between reads: (Default 5) ");
+                {
+                    if (!int.TryParse(newbaudrate, out baudrate))
+                        baudrate = settings.BAUD_RATE;
+                }
+
+                Console.Write($"Time (in sec) between reads: (Default:{delay}) ");
                 string secs = Console.ReadLine();
                 if (!int.TryParse(secs, out delay))
                 {
-                    delay = 5;
+                    delay = settings.DELAY_SEC;
                 }
-                Console.Write($@"Blazor Server URL:Port: (Default {_host} ) ");
+
+                Console.Write($@"Blazor Server URL:Port: (Default:{_host} ) ");
                 string newhost = Console.ReadLine();
                 if (!string.IsNullOrEmpty(newhost))
                     _host = newhost;
@@ -62,10 +89,10 @@ namespace SerialBlazor
                 _host += "/";
             isFirstRead = true;
             // Create a new SerialPort on port COM7
-            _serialPort = new SerialPort(comport, int.Parse(baudrate));
+            _serialPort = new SerialPort(comport, baudrate);
             // Set the read/write timeouts
-            _serialPort.ReadTimeout = 10000;
-            _serialPort.WriteTimeout = 10000;
+            _serialPort.ReadTimeout = settings.ReadTimeout;
+            _serialPort.WriteTimeout = settings.WriteTimeout;
             _serialPort.Open();
             Console.WriteLine("Opened the port.");
 
@@ -143,5 +170,18 @@ namespace SerialBlazor
             }
             busy = false;        
         }
+    }
+
+    public class Settings
+    {
+        public string COM_PORT { get; set; }
+        public int BAUD_RATE { get; set; }
+        public int DELAY_SEC { get; set; }
+        public string HOST { get; set; }
+        public uint PORT { get; set; }
+        public int WriteTimeout { get; set; }
+        public int ReadTimeout {get; set;}
+
+
     }
 }
