@@ -3,7 +3,7 @@ A .Net 5 version update of  [djaus2/BlazorSensorApp](https://github.com/djaus2/S
 
 ## Includes
 - Blazor Server for forwarding telemetry to an Azure IoT Hub
-  - Connection string required
+  - Connection string required. _Need to make this a setting in the Wasm app._
 - Wasm app for forwarding simuated telemetry via the server.
 - Can similarly forward real telemetry from RPi, Arduino etc
     - _Arduino app to be added from previous repository._
