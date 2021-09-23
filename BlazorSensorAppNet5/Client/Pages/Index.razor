@@ -1,0 +1,78 @@
+﻿@page "/"
+@page "/index"
+
+@using System.Net.Http
+@inject HttpClient Http
+
+<h1> Blazor Simulated Azure IoT Hub Device with Sensors</h1>
+<p>@Result</p>
+<font color="blue">
+    A Blazor WebAssembly app <i>(with PWA set)</i>.<br />
+    Simulates an IoT Device with a Tempedrature, Humidity or Acceleraometer sensor.<br />
+    Can choose sensor type and set data in client.<br />
+    That is then sent to the Service which then forwards it as an IoT Hub message to an Azure IoT Hub.
+</font>
+<br />
+<br />
+IoT Hub Device Connection String is embedded in Server appsettings.json
+<br />
+
+<h2>Pages:</h2>
+<ul>
+    <li>
+        <b>Send Data</b>
+        <ul>
+            <li>
+                Set sensor data ready to send
+                <ul>
+                    <li>Choose sensor type</li>
+                    <li>Set value/s</li>
+                    <li>Set to only one message to send</li>
+                </ul>
+            </li>
+            <li>Then press [Send]</li>
+        </ul>
+        <b>Alternatively can auto-generate random sensor data to send</b>
+        <ul>
+            <li>Set number of messages to send</li>
+            <li>Set period between messages</li>
+            <li>Then press [Send]</li>
+            <li><i>Sensor Type with each message is random as well.</i></li>
+        </ul>
+    </li>
+    <li>
+        <b>Direct Temp sample</b>
+        <ul>
+            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Temperature data.</li>
+            <li>Auto-sends when navigated to.</li>
+        </ul>
+    </li>
+    <li>
+        <b>Direct Hunid sample</b>
+        <ul>
+            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Hunidity data.</li>
+            <li>Auto-sends when navigated to.</li>
+        </ul>
+    </li>
+    <li>
+        <b>Direct Accel sample</b>
+        <ul>
+            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Accelerometer data.</li>
+            <li>Auto-sends when navigated to.</li>
+        </ul>
+    </li>
+</ul>
+
+@code{
+
+    string Result = "Nok";
+    int OK = 0;
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Http.GetAsync("Sensor");
+        System.Diagnostics.Debug.WriteLine(result.StatusCode);
+        Result = result.StatusCode.ToString() +": " + await result.Content.ReadAsStringAsync();
+        System.Diagnostics.Debug.WriteLine(Result);
+        await base.OnInitializedAsync();
+    }
+}
