@@ -69,10 +69,10 @@ IoT Hub Device Connection String is embedded in Server appsettings.json
     int OK = 0;
     protected override async Task OnInitializedAsync()
     {
-        var result = await Http.GetAsync("Sensor");
+@*        var result = await Http.GetAsync("Sensor");
         System.Diagnostics.Debug.WriteLine(result.StatusCode);
         Result = result.StatusCode.ToString() +": " + await result.Content.ReadAsStringAsync();
-        System.Diagnostics.Debug.WriteLine(Result);
+        System.Diagnostics.Debug.WriteLine(Result);*@
         await base.OnInitializedAsync();
     }
 }

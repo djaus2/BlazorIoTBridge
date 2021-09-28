@@ -1,16 +1,40 @@
-﻿@page "/counter"
+﻿@page "/commands"
 
-<h1>Counter</h1>
+@inject HttpClient client
 
-<p>Current count: @currentCount</p>
+<h1>Commands</h1>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
+Command:&nbsp;<input type="text" @bind="@command"/><br />
+Command:&nbsp;<input type="text" @bind="@value"/>
 
 @code {
     private int currentCount = 0;
+    private string command { get; set; } = "";
+    private string value { get; set; } = "";
+    bool run = true;
 
-    private void IncrementCount()
+    private async Task StartReads()
     {
-        currentCount++;
+        int val;
+        BlazorSensorAppNet5.Shared.Command cmd;
+        if (!int.TryParse(value, out val))
+            cmd = new BlazorSensorAppNet5.Shared.Command { Action = command };
+        else
+            cmd = new BlazorSensorAppNet5.Shared.Command { Action = command, Parameter = val };
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("WeatherForecast", cmd,null);
+        command = "";
+        value = "";
+        cmd = null;
+        if (response.IsSuccessStatusCode)
+        {
+            System.Diagnostics.Debug.WriteLine("Sent OK");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+        }
+       
     }
+
 }

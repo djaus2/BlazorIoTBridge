@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO.Ports;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using BlazorSensorAppNet5.Shared;
@@ -34,6 +35,7 @@ namespace SerialBlazor
         static string comport = "COM4";
         static int baudrate = 9600;
         static bool auto = false;
+        static char TERMINATOR = '#';
         static void Main(string[] args)
         {
             var builder = new ConfigurationBuilder()
@@ -48,6 +50,8 @@ namespace SerialBlazor
             comport = settings.ComPort;
             baudrate = settings.BaudRate;
             auto = settings.Auto;
+            if (settings.TerminatorChar.Length > 0)
+                TERMINATOR = settings.TerminatorChar[0];
 
             Console.WriteLine("Hello IoT Nerd!");
             // Get a list of serial port names.
@@ -73,6 +77,9 @@ namespace SerialBlazor
                     else
                         Console.Write($"Port no: (Default {comport}) ");
                     port = Console.ReadLine();
+                    //Alllow for just the port number
+                    if (port.Length == 1)
+                        port = "COM" + port;
                     cont = !lst.Contains(port);
                     // Can just press return for defaults.
                     if ( (string.IsNullOrEmpty(port)) && (comport != ""))
@@ -112,12 +119,15 @@ namespace SerialBlazor
             _serialPort.ReadTimeout = settings.ReadTimeout;
             _serialPort.WriteTimeout = settings.WriteTimeout;
             _serialPort.Open();
+            
             if (_serialPort.IsOpen)
             {
 
                 Console.WriteLine("Opened the port.");
+                //if (_serialPort.BytesToRead != 0)
+                //    _serialPort.DiscardInBuffer();
 
-                Console.Write("Press enter when Server is up.");
+                    Console.Write("Press enter when Server is up.");
                 Console.ReadLine();
                 Console.WriteLine();
                 Console.WriteLine("Use Azure IoT Explorer to display Telemetry sent:");
@@ -126,8 +136,10 @@ namespace SerialBlazor
                 bool cont = true;
                 while (cont)
                 {
-                    Signal();
-                    Read().GetAwaiter();
+                    Task t3 = Task.Run(() => Signal());
+                    Task t4 = Task.Run(() => Read());
+                    t3.Wait();
+                    t4.Wait();
                 }
                 _serialPort.Close();
             }
@@ -135,41 +147,94 @@ namespace SerialBlazor
                 Console.WriteLine("Serial port {0} failed to open.", comport);      
         }
 
-        public static void Signal()
+        public static async Task Signal()
         {
-            if(isFirstRead)
+            while (true)
             {
-                isFirstRead = false;
-                if (auto)
-                    Thread.Sleep(30000);
-                else
-                    Thread.Sleep(3000);
+                if (isFirstRead)
+                {
+                    isFirstRead = false;
+                    if (auto)
+                        Thread.Sleep(1000);
+                }
+                //else
+                //Thread.Sleep(delay*1000);
+                string cmd = "";
+                try
+                {
+                    //See if a new command has been sent
+                    using var client = new System.Net.Http.HttpClient();
+                    client.BaseAddress = new Uri(_host);
+                    //var response = await client.GetAsync("Sensor");
+                    //cmd = await response.Content.ReadAsStringAsync();
+                    Command _command = await client.GetFromJsonAsync<Command>("Sensor", null);  //.GetJsonAsync<Command>("Sensor")
+                    cmd = JsonConvert.SerializeObject(_command);
+                    //cmd = _command.Action;
+                    if (_command.Action != null)
+                    {
+                        cmd = cmd.Trim(); //.ToUpper();
+                        if (!string.IsNullOrEmpty(cmd))
+                        {
+                            int len = "{ \"12345\":\"12345\",\"12345\":12345}".Length+2;
+                            len = 40;
+                            /*if ((cmd=="SETRATE") || (cmd == "SET_RATE") || (cmd == "SET RATE"))
+                            {
+                                cmd = _command.Parameter.ToString();
+                            }*/
+                            //Set cmd length to 5 characters
+                            cmd = cmd.Replace(" ", "");
+                            while (cmd.Length < len) // 5)
+                                cmd += ' ';
+                            cmd = cmd.Substring(0, len);
+                            _serialPort.WriteLine(cmd);
+                            if (_command.Parameter != null)
+                                Console.WriteLine("Command sent: {0} Parameter: {1}", _command.Action, _command.Parameter);
+                            else
+                                Console.WriteLine("Command sent: {0}  No parameter.", _command.Action);
+
+                        }
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                Thread.Sleep(3333);
             }
-            else
-             Thread.Sleep(delay*1000);
-            _serialPort.WriteLine("READ");
+
         }
 
         public static async Task Read()
         {
-            try
+            while(true)
             {
-                string sensor = _serialPort.ReadLine();
-                Console.WriteLine(sensor);
-                if (sensor[0] =='{')
+                try
                 {
-                    await SendSensor(sensor);
+                    string sensor = "";
+                    //if (_serialPort.BytesToRead > 0)
+                    //{
+                    //    while (_serialPort.BytesToRead > 0)
+                    //    {
+                    //        sensor += _serialPort.ReadExisting();
+                    //    }
+                    sensor = _serialPort.ReadLine();
+                        Console.WriteLine(sensor);
+                        if (!string.IsNullOrEmpty(sensor))
+                        {
+                            if (sensor[0] == '{')
+                            {
+                                await SendSensor(sensor);
+                            }
+                        }
+                    
                 }
+                catch (TimeoutException) { }
             }
-            catch (TimeoutException) { }
         }
 
-        static bool busy = false;
         public static async Task  SendSensor(string sensorJson)
         {
-            if (busy)
-                return;
-            busy = true;
             Sensor sensor = JsonConvert.DeserializeObject<Sensor>(sensorJson);
             using var client = new System.Net.Http.HttpClient();
 
@@ -193,8 +258,7 @@ namespace SerialBlazor
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
-            }
-            busy = false;        
+            }     
         }
     }
 
@@ -208,6 +272,7 @@ namespace SerialBlazor
         public uint Port { get; set; }
         public int WriteTimeout { get; set; }
         public int ReadTimeout {get; set;}
+        public string TerminatorChar { get; set; }
 
 
     }

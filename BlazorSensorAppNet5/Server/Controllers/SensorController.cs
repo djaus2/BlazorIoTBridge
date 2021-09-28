@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using System.Reflection.Metadata;
 using Newtonsoft.Json;
 using System.Threading;
+using System.Collections.Concurrent;
 
 namespace BlazorSensorAppNet5.Server.Controllers
 {
@@ -20,7 +21,9 @@ namespace BlazorSensorAppNet5.Server.Controllers
 
         private static SimulatedDeviceCS _SimulatedDeviceCS;
 
-        private static int Count {get;set;} = 0;
+        private static int Count { get; set; } = 0;
+
+
 
         public SensorController(ILogger<SensorController> logger)
         {
@@ -38,14 +41,74 @@ namespace BlazorSensorAppNet5.Server.Controllers
             _SimulatedDeviceCS = null;
         }
 
+        private static string block = "BLOCK";
+
+        private static ConcurrentQueue<Command> Commands { get; set; } = null;
+
+        public static Command Command
+        {
+            get
+            {
+                if (Commands == null)
+                    return null;
+                // Note Peeks, doesn't dequeue the value.
+                Command val;
+                //Monitor.Enter(block);
+                if (Commands.Count() == 0)
+                    val = null;
+                else
+                    while(!Commands.TryPeek(out val));
+                //Monitor.Exit(block);
+                return val;
+            }
+            set
+            {
+                if (Commands == null)
+                    return;
+                //Monitor.Enter(block);
+                Commands.Enqueue(value);
+                //Monitor.Exit(block);
+            }
+        }
+
+        /// <summary>
+        /// Same as Command=>Get but dequeues it.
+        /// </summary>
+        /// <returns></returns>
+        public static Command GetCommand()
+        {
+            Command val;
+            if (Commands == null)
+                val = null;
+
+            //Monitor.Enter(block);
+            else if (Commands.Count() == 0)
+                val = null;
+            else
+            {
+                while ( !Commands.TryDequeue(out val));
+            }
+            //Monitor.Exit(block);
+            return val;
+        }
+
+        public static void StartQ()
+        {
+            Commands = new ConcurrentQueue<Command>();
+        }
+
+
         [HttpGet]
         public async Task<IActionResult> Get()
         {
             await Task.Delay(1);
-            return Ok("Sensors Rok");
+            Command val = GetCommand();
+            if (val == null)
+                val = new Command();
+            return Ok(val);
         }
 
-            [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> Post(object obj)
         {
             bool state;
@@ -58,7 +121,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 await Task.Delay(333);
                 return Ok(Count);
             }
-            else 
+            else
             {
                 try
                 {
@@ -72,7 +135,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                     await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //
                     //await Task.Delay(1000);
                     Count++;
-                        return Ok(Count);
+                    return Ok(Count);
                     //}
                     //else
                     //    return BadRequest();

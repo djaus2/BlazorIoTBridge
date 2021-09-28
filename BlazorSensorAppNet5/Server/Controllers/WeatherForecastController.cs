@@ -24,7 +24,26 @@ namespace BlazorSensorAppNet5.Server.Controllers
             _logger = logger;
         }
 
-        [HttpGet]
+        public static bool isfirst = true;
+        [HttpPost]
+        public async Task<IActionResult> Post(Command obj)
+        {
+            Command cmd = null;
+            if (isfirst)
+            {
+                isfirst = false;
+                SensorController.StartQ();
+            }
+            else
+            {
+                cmd = obj;
+                SensorController.Command = cmd;
+            }
+            await Task.Delay(333);
+            return Ok(cmd);
+        }
+
+            [HttpGet]
         public IEnumerable<WeatherForecast> Get()
         {
             var rng = new Random();
