@@ -26,3 +26,14 @@
 </body>
 
 </html>
+
+<script>
+    window.clipboardCopy = {
+        readText: function () {
+            return navigator.clipboard.readText()
+                .catch(function (error) {
+                    alert(error);
+                });
+        }
+    }
+</script>

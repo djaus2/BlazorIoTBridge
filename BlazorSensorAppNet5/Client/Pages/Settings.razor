@@ -1,0 +1,172 @@
+﻿@page "/settings"
+
+@using System.IO;
+@inject IJSRuntime JSRuntime
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+
+<h1>Local Storage!</h1>
+
+
+
+ 
+<EditForm Model="model">
+<table width="100%" border="0">
+
+<HubValue @bind-BindingValue="model.DeviceGuid" PropertyName="DeviceGuid"  />
+<HubValue @bind-BindingValue="model.IOTHUB_DEVICE_CONN_STRING"  PropertyName="IOTHUB_DEVICE_CONN_STRING"  />
+<HubValue @bind-BindingValue="model.IOTHUB_HUB_CONN_STRING"  PropertyName="IOTHUB_HUB_CONN_STRING"  />
+<HubValue @bind-BindingValue="model.SERVICE_CONNECTION_STRING"  PropertyName="SERVICE_CONNECTION_STRING"  />
+<HubValue @bind-BindingValue="model.EVENT_HUBS_CONNECTION_STRING"  PropertyName="EVENT_HUBS_CONNECTION_STRING"  />
+<HubValue @bind-BindingValue="model.SHARED_ACCESS_KEY_NAME"  PropertyName="SHARED_ACCESS_KEY_NAME"  />
+<HubValue @bind-BindingValue="model.HUB_NAME"  PropertyName="HUB_NAME"  /> 
+<HubValue @bind-BindingValue="model.DEVICE_NAME"  PropertyName="DEVICE_NAME"  />
+<HubValue @bind-BindingValue="model.SYMMETRIC_KEY"  PropertyName="SYMMETRIC_KEY"  />
+<HubValue @bind-BindingValue="model.EVENT_HUBS_SAS_KEY"  PropertyName="EVENT_HUBS_SAS_KEY"  />
+<HubValue @bind-BindingValue="model.EVENT_HUBS_COMPATIBILITY_PATH"  PropertyName="EVENT_HUBS_COMPATIBILITY_PATH"  />
+<HubValue @bind-BindingValue="model.EVENT_HUBS_COMPATIBILITY_ENDPOINT"  PropertyName="EVENT_HUBS_COMPATIBILITY_ENDPOINT"  />
+</table>
+</EditForm>
+
+<textarea rows="@Rows" cols="@Cols"
+          @bind-value="@model.Txt"
+          @bind-value:event="oninput" />
+
+  
+<button class="btn btn-secondary" @onclick="Save">Save</button>
+<button class="btn btn-secondary" @onclick="Paste">Paste</button>
+
+@code {
+
+    int Rows = 1;
+    int Cols = 100;
+    public static BlazorSensorAppNet5.Shared.Parameters parameters;
+
+    public static Info model { get; set; }
+
+    public class Info
+    {
+        public string DeviceGuid { get; set; } = "";
+        public string HUB_NAME { get; set; } = "";
+        public string DEVICE_NAME  { get; set; } = "";
+        public string SHARED_ACCESS_KEY_NAME { get; set; } = "iothubowner";
+
+        public string IOTHUB_DEVICE_CONN_STRING { get; set; } = "";
+        public string IOTHUB_HUB_CONN_STRING { get; set; } = "";
+        public string SERVICE_CONNECTION_STRING { get; set; } = "";
+
+
+        public string SYMMETRIC_KEY { get; set; } = "";
+
+        public string EVENT_HUBS_CONNECTION_STRING { get; set; } = "";
+        public string EVENT_HUBS_COMPATIBILITY_PATH {get; set;} = "";
+        public string EVENT_HUBS_SAS_KEY { get; set; } = "";
+        public string EVENT_HUBS_COMPATIBILITY_ENDPOINT { get; set; } = "";
+
+        public string Txt { get; set; } = "";
+
+    }
+
+  public  void  Save()
+  {
+        parameters = new  BlazorSensorAppNet5.Shared.Parameters();
+        //model = new Info();
+        using (StringReader sr = new StringReader(model.Txt))
+        {
+            string line;
+            while ((line = sr.ReadLine()) != null)
+            {
+                line = line.Trim();
+                if (!string.IsNullOrEmpty(line))
+                {
+                    string[] parts = line.Split(":");
+                    if (parts.Length < 2)
+                        continue;
+                    if (parts.Length > 2)
+                    {
+                        parts[1] = line.Substring(parts[0].Length + 1);
+                    }
+                    {
+                        string name = parts[0].Replace("\"", "").Trim();
+                        if (!string.IsNullOrEmpty(line))
+                        {
+                            string val = parts[1].Trim();
+                            if (string.IsNullOrEmpty(val))
+                                continue;
+                            if (val[val.Length-1]==',')
+                                val = val.Substring(0,val.Length-1);
+                            val = val.Replace("\"", "").Trim();
+                            if (!string.IsNullOrEmpty(val))
+                            {
+                                System.Diagnostics.Debug.WriteLine("{0} {1}", name, val);
+                                switch (name)
+                                {
+                                     case "DEVICE_GUID":
+                                        model.DeviceGuid = val;
+                                        break;
+                                     case "SHARED_ACCESS_KEY_NAME":
+                                        model.SHARED_ACCESS_KEY_NAME = val;
+                                        break;
+                                    case "HUB_NAME":
+                                        model.HUB_NAME = val;
+                                        break;
+                                    case "DEVICE_NAME":
+                                        model.DEVICE_NAME = val;
+                                        break;
+                                    case "IOTHUB_DEVICE_CONN_STRING":
+                                        model.IOTHUB_DEVICE_CONN_STRING = val;
+                                        break;
+                                     case "IOTHUB_CONN_STRING_CSHARP":
+                                        model.IOTHUB_HUB_CONN_STRING = val;
+                                        break;
+                                     case "SERVICE_CONNECTION_STRING":
+                                        model.SERVICE_CONNECTION_STRING = val;
+                                        break;
+                                     case "EVENT_HUBS_COMPATIBILITY_PATH":
+                                        model.EVENT_HUBS_COMPATIBILITY_PATH = val;
+                                        break;        
+                                     case "EVENT_HUBS_COMPATIBILITY_ENDPOINT":
+                                        model.EVENT_HUBS_COMPATIBILITY_ENDPOINT = val;
+                                        break;
+                                      case "EVENT_HUBS_SAS_KEY":
+                                        model.EVENT_HUBS_SAS_KEY = val;
+                                        break;
+                                     case "EVENT_HUBS_CONNECTION_STRING":
+                                        model.EVENT_HUBS_CONNECTION_STRING = val;
+                                        break;
+                                     case "SYMMETRIC_KEY":
+                                        model.SYMMETRIC_KEY = val;
+                                        break;
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        parameters.DeviceGuid = model.DeviceGuid;
+        parameters.EventHubName = model.EVENT_HUBS_COMPATIBILITY_PATH;
+        parameters.EventHubCompatibleEndpoint = model.EVENT_HUBS_COMPATIBILITY_PATH;
+        parameters.EventHubConnectionString = model.EVENT_HUBS_CONNECTION_STRING;
+        parameters.EventHubName = model.HUB_NAME;
+        parameters.SharedAccessKey = model.SHARED_ACCESS_KEY_NAME;
+        BlazorSensorAppNet5.Shared.Parameters._Parameters = parameters;
+  }
+
+  public async Task Paste()
+  {
+        model.Txt = await JSRuntime.InvokeAsync<string>("clipboardCopy.readText");
+  }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        model = new Info();
+
+    }
+
+}

@@ -11,6 +11,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorSensorAppNet5.Shared"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SerialBlazor", "BlazorSensorAppNet5\Serail2Blazor\SerialBlazor.csproj", "{FD291519-8770-4389-875F-151873BA2450}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReadD2cMessagesBlaz", "M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\ReadD2cMessagesBlaz\ReadD2cMessagesBlaz.csproj", "{BA348857-627A-4D0D-8F00-2454069AE704}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorSensorAppNet5.SharedDNC", "BlazorSensorAppNet5\Shared -DNC\BlazorSensorAppNet5.SharedDNC.csproj", "{986696EA-888C-4895-9167-AB02DDDEB433}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +37,14 @@ Global
 		{FD291519-8770-4389-875F-151873BA2450}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FD291519-8770-4389-875F-151873BA2450}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FD291519-8770-4389-875F-151873BA2450}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BA348857-627A-4D0D-8F00-2454069AE704}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BA348857-627A-4D0D-8F00-2454069AE704}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BA348857-627A-4D0D-8F00-2454069AE704}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BA348857-627A-4D0D-8F00-2454069AE704}.Release|Any CPU.Build.0 = Release|Any CPU
+		{986696EA-888C-4895-9167-AB02DDDEB433}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{986696EA-888C-4895-9167-AB02DDDEB433}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{986696EA-888C-4895-9167-AB02DDDEB433}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{986696EA-888C-4895-9167-AB02DDDEB433}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

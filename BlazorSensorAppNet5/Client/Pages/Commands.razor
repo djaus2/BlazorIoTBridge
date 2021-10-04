@@ -14,6 +14,12 @@ Command:&nbsp;<input type="text" @bind="@value"/>
     private string value { get; set; } = "";
     bool run = true;
 
+    protected override async Task OnInitializedAsync()
+    {
+        var cmd = new BlazorSensorAppNet5.Shared.Command { Action = "STARTQ" };
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("PostedData", cmd,null);
+    }
+
     private async Task StartReads()
     {
         int val;
@@ -22,7 +28,7 @@ Command:&nbsp;<input type="text" @bind="@value"/>
             cmd = new BlazorSensorAppNet5.Shared.Command { Action = command };
         else
             cmd = new BlazorSensorAppNet5.Shared.Command { Action = command, Parameter = val };
-        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("WeatherForecast", cmd,null);
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("PostedData", cmd,null);
         command = "";
         value = "";
         cmd = null;

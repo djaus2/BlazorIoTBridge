@@ -33,7 +33,8 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 Count = 0;
                 _SimulatedDeviceCS = new SimulatedDeviceCS();
             }
-
+            if (Commands == null)
+                StartQ();
         }
 
         ~SensorController()
@@ -94,7 +95,8 @@ namespace BlazorSensorAppNet5.Server.Controllers
 
         public static void StartQ()
         {
-            Commands = new ConcurrentQueue<Command>();
+            if (Commands == null)
+                Commands = new ConcurrentQueue<Command>();
         }
 
 
@@ -108,17 +110,25 @@ namespace BlazorSensorAppNet5.Server.Controllers
             return Ok(val);
         }
 
+        public static List<Sensor> PostLog { get; set; }
+
         [HttpPost]
         public async Task<IActionResult> Post(object obj)
         {
-            bool state;
+            int state;
             Sensor sensor;
 
             string json = obj.ToString();
 
-            if (bool.TryParse(json, out state))
+            if (int.TryParse(json, out state))
             {
-                await Task.Delay(333);
+                //await Task.Delay(333);
+                switch (state)
+                {
+                    case 1:
+                        PostLog = new List<Sensor>();
+                        break;
+                }
                 return Ok(Count);
             }
             else
@@ -128,11 +138,19 @@ namespace BlazorSensorAppNet5.Server.Controllers
                     //json = "{\"No\":5,\"Id\":\"Sensor5\",\"SensorType\":5,\"Values\":[19.04,56.16,101897.00]}";
 
                     sensor = JsonConvert.DeserializeObject<Sensor>(json);
+                    sensor.TimeStamp = DateTime.Now.Ticks;
                     //if (sensor != null)
                     //{
                     //    if (!SimulatedDevice.KeepRunning)
                     //        await SimulatedDevice.StartMessageSending();
                     await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //
+
+                    if (PostLog == null)
+                    {
+                        Count = 0;
+                        PostLog = new List<Sensor>();
+                    }
+                    PostLog.Add(sensor);
                     //await Task.Delay(1000);
                     Count++;
                     return Ok(Count);

@@ -9,7 +9,6 @@ using Newtonsoft.Json;
 
 
 using static System.Net.Http.HttpClient;
-using System.Net.Http.Json;
 using System.Threading;
 using System.Configuration;
 
@@ -35,7 +34,9 @@ namespace SerialBlazor
         static string comport = "COM4";
         static int baudrate = 9600;
         static bool auto = false;
-        static char TERMINATOR = '#';
+        static char ACK = '#';
+        static string InitialMessage = "* Begin";
+        static bool IsFirstSerialRead = true;
         static void Main(string[] args)
         {
             var builder = new ConfigurationBuilder()
@@ -50,10 +51,11 @@ namespace SerialBlazor
             comport = settings.ComPort;
             baudrate = settings.BaudRate;
             auto = settings.Auto;
-            if (settings.TerminatorChar.Length > 0)
-                TERMINATOR = settings.TerminatorChar[0];
+            InitialMessage = settings.InitialMessage;
+            if (settings.ACK.Length > 0)
+                ACK = settings.ACK[0];
 
-            Console.WriteLine("Hello IoT Nerd!");
+            Console.WriteLine("> \tHello IoT Nerd!");
             // Get a list of serial port names.
             string[] ports = SerialPort.GetPortNames();
             var lst = new List<string>(ports);
@@ -61,7 +63,7 @@ namespace SerialBlazor
             {
                 if (!lst.Contains(comport))
                     comport = "";
-                Console.WriteLine("The following serial ports were found:");                                                                                          
+                Console.WriteLine("> \tThe following serial ports were found:");                                                                                          
                 // Display each port name to the console.
                 foreach (string _port in ports)
                 {
@@ -73,9 +75,9 @@ namespace SerialBlazor
                 do
                 {
                     if (comport =="")
-                        Console.Write($"Port no: (No default) ");
+                        Console.Write($"> \tPort no: (No default) ");
                     else
-                        Console.Write($"Port no: (Default {comport}) ");
+                        Console.Write($"> \tPort no: (Default {comport}) ");
                     port = Console.ReadLine();
                     //Alllow for just the port number
                     if (port.Length == 1)
@@ -88,7 +90,7 @@ namespace SerialBlazor
                 if (!string.IsNullOrEmpty(port)) 
                     comport = port;
 
-                Console.Write($"baudrate: (Default: {baudrate}) ");
+                Console.Write($"> \tbaudrate: (Default: {baudrate}) ");
                 string newbaudrate = Console.ReadLine();
                 if (!string.IsNullOrEmpty(newbaudrate))
                 {
@@ -96,14 +98,14 @@ namespace SerialBlazor
                         baudrate = settings.BaudRate;
                 }
 
-                Console.Write($"Time (in sec) between reads: (Default:{delay}) ");
+                Console.Write($"> \tTime (in sec) between reads: (Default:{delay}) ");
                 string secs = Console.ReadLine();
                 if (!int.TryParse(secs, out delay))
                 {
                     delay = settings.Delay_Secs;
                 }
 
-                Console.Write($@"Blazor Server URL:Port: (Default:{_host} ) ");
+                Console.Write($@"> Blazor Server URL:Port: (Default:{_host} ) ");
                 string newhost = Console.ReadLine();
                 if (!string.IsNullOrEmpty(newhost))
                     _host = newhost;
@@ -114,26 +116,40 @@ namespace SerialBlazor
                 _host += "/";
             isFirstRead = true;
             // Create a new SerialPort on port COM7
+            Console.Write("> \tPress enter when ready.");
+            Console.ReadLine();
             _serialPort = new SerialPort(comport, baudrate);
             // Set the read/write timeouts
             _serialPort.ReadTimeout = settings.ReadTimeout;
             _serialPort.WriteTimeout = settings.WriteTimeout;
-            _serialPort.Open();
+            while (!_serialPort.IsOpen)
+            {
+                try
+                {
+                    _serialPort.Open();
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("> \tSerial Port {0} didn't open. Please check..", comport);
+                    Thread.Sleep(1000);
+                }
+            }
             
             if (_serialPort.IsOpen)
             {
-
-                Console.WriteLine("Opened the port.");
+                Console.WriteLine("> \tOpened the Serial Port {0}.", comport);
                 //if (_serialPort.BytesToRead != 0)
                 //    _serialPort.DiscardInBuffer();
 
-                    Console.Write("Press enter when Server is up.");
-                Console.ReadLine();
+                   // Console.Write("Press enter when Server is up.");
+                //Console.ReadLine();
                 Console.WriteLine();
-                Console.WriteLine("Use Azure IoT Explorer to display Telemetry sent:");
-                Console.WriteLine(@"https://docs.microsoft.com/en-us/azure/iot-fundamentals/howto-use-iot-explorer");
+                Console.WriteLine("> \tUse Azure IoT Explorer to display Telemetry sent:");
+                Console.WriteLine(@"> \thttps://docs.microsoft.com/en-us/azure/iot-fundamentals/howto-use-iot-explorer");
                 Console.WriteLine();
                 bool cont = true;
+                IsFirstSerialRead = true;
+                _serialPort.WriteLine("RESET");
                 while (cont)
                 {
                     Task t3 = Task.Run(() => Signal());
@@ -149,6 +165,10 @@ namespace SerialBlazor
 
         public static async Task Signal()
         {
+            while(IsFirstSerialRead)
+            {
+                Thread.Sleep(1000);
+            }
             while (true)
             {
                 if (isFirstRead)
@@ -169,29 +189,24 @@ namespace SerialBlazor
                     //cmd = await response.Content.ReadAsStringAsync();
                     Command _command = await client.GetFromJsonAsync<Command>("Sensor", null);  //.GetJsonAsync<Command>("Sensor")
                     cmd = JsonConvert.SerializeObject(_command);
-                    //cmd = _command.Action;
-                    if (_command.Action != null)
+                    string cd = _command.Action;
+                    if (cd != null)
                     {
                         cmd = cmd.Trim(); //.ToUpper();
                         if (!string.IsNullOrEmpty(cmd))
                         {
-                            int len = "{ \"12345\":\"12345\",\"12345\":12345}".Length+2;
-                            len = 40;
-                            /*if ((cmd=="SETRATE") || (cmd == "SET_RATE") || (cmd == "SET RATE"))
+                            // Ignore blank commands.                       
+                            cd = cd.Trim();
+                            if (cd != "")
                             {
-                                cmd = _command.Parameter.ToString();
-                            }*/
-                            //Set cmd length to 5 characters
-                            cmd = cmd.Replace(" ", "");
-                            while (cmd.Length < len) // 5)
-                                cmd += ' ';
-                            cmd = cmd.Substring(0, len);
-                            _serialPort.WriteLine(cmd);
-                            if (_command.Parameter != null)
-                                Console.WriteLine("Command sent: {0} Parameter: {1}", _command.Action, _command.Parameter);
-                            else
-                                Console.WriteLine("Command sent: {0}  No parameter.", _command.Action);
-
+                                Monitor.Enter(_serialPort);
+                                _serialPort.WriteLine(cmd);
+                                if ((_command.Parameter != null) && (_command.Parameter != 0))
+                                    Console.WriteLine("> \tCommand sent: {0} Parameter: {1}", _command.Action, _command.Parameter);
+                                else
+                                    Console.WriteLine("> \tCommand sent: {0}  No parameter.", _command.Action);
+                                Monitor.Exit(_serialPort);
+                            }
                         }
                     }
 
@@ -199,16 +214,22 @@ namespace SerialBlazor
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
+                    Console.WriteLine("{0}", _host);
                 }
                 Thread.Sleep(3333);
             }
 
         }
 
+
         public static async Task Read()
         {
             while(true)
             {
+                Monitor.Enter(_serialPort);
+                _serialPort.Write("*");
+                Monitor.Exit(_serialPort);
+                Thread.Sleep(1000);
                 try
                 {
                     string sensor = "";
@@ -219,15 +240,34 @@ namespace SerialBlazor
                     //        sensor += _serialPort.ReadExisting();
                     //    }
                     sensor = _serialPort.ReadLine();
+                    sensor = sensor.Trim();
+
+                    if (!string.IsNullOrEmpty(sensor))
+                    {
                         Console.WriteLine(sensor);
-                        if (!string.IsNullOrEmpty(sensor))
+                        if (IsFirstSerialRead)
                         {
-                            if (sensor[0] == '{')
-                            {
-                                await SendSensor(sensor);
-                            }
+                            IsFirstSerialRead = false;
+                            continue;
                         }
-                    
+                        else if (sensor[0]=='*')
+                        {
+                            //Ignore message from device
+                            continue;
+                        }
+                        else if (sensor[0] == '{')
+                        {
+                            await SendSensor(sensor);
+                            // Make sure not sending a command when sending an ACK
+                            Monitor.Enter(_serialPort);
+
+                            //_serialPort.Write(new char[] { ACK }, 0, 1);
+                            Monitor.Exit(_serialPort);
+                        }
+                        else Console.WriteLine("> \tInvalid Sensor Data.");
+                    }
+                    //An empty Serial.println(""); gets to here so is OK
+                    //else Console.WriteLine("> Invalid Sensor Data.");
                 }
                 catch (TimeoutException) { }
             }
@@ -244,7 +284,9 @@ namespace SerialBlazor
             {
                 client.BaseAddress = new Uri(_host);
                 // Note no "api/Sensor" but just "Sensor" in next LOC!:
+                Console.Write("Sending ... ");
                 var response = await client.PostAsJsonAsync<Sensor>("Sensor", sensor,null);
+                Console.Write(" Sent: ");
 //
                 if (response.IsSuccessStatusCode)
                 {
@@ -252,6 +294,7 @@ namespace SerialBlazor
                 }
                 else
                 {
+                    Console.WriteLine();
                     Console.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
                 }
             }
@@ -272,7 +315,8 @@ namespace SerialBlazor
         public uint Port { get; set; }
         public int WriteTimeout { get; set; }
         public int ReadTimeout {get; set;}
-        public string TerminatorChar { get; set; }
+        public string ACK { get; set; }
+        public string InitialMessage { get; set; }
 
 
     }

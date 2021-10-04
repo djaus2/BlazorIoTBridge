@@ -5,7 +5,7 @@ using System.Threading;
 using System.Text.Json.Serialization;
 using System.Globalization;
 
-namespace BlazorSensorAppNet5.Shared
+namespace BlazorSensorAppNet5.SharedDNC
 {
 
     public class Sensor

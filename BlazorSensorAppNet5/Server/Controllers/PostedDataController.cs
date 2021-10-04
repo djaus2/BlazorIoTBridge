@@ -10,16 +10,16 @@ namespace BlazorSensorAppNet5.Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class WeatherForecastController : ControllerBase
+    public class PostedDataController : ControllerBase
     {
         private static readonly string[] Summaries = new[]
         {
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
-        private readonly ILogger<WeatherForecastController> _logger;
+        private readonly ILogger<PostedDataController> _logger;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public PostedDataController(ILogger<PostedDataController> logger)
         {
             _logger = logger;
         }
@@ -28,32 +28,28 @@ namespace BlazorSensorAppNet5.Server.Controllers
         [HttpPost]
         public async Task<IActionResult> Post(Command obj)
         {
-            Command cmd = null;
-            if (isfirst)
+            Command cmd = obj;
+            if (cmd.Action =="STARTQ")
             {
-                isfirst = false;
-                SensorController.StartQ();
+                if(SensorController.PostLog==null)
+                    SensorController.StartQ();
             }
             else
             {
-                cmd = obj;
+                if (SensorController.PostLog == null)
+                    SensorController.StartQ();
                 SensorController.Command = cmd;
             }
             await Task.Delay(333);
             return Ok(cmd);
         }
 
-            [HttpGet]
-        public IEnumerable<WeatherForecast> Get()
+        [HttpGet]
+        public IEnumerable<Sensor> Get()
         {
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+            if (SensorController.PostLog == null)
+                SensorController.PostLog = new List<Sensor>();
+            return SensorController.PostLog.ToArray();
         }
     }
 }

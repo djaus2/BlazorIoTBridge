@@ -1,0 +1,76 @@
+﻿@inject IJSRuntime JSRuntime
+
+
+    <tr width="100%">
+<td width="360">
+<button class="btn btn-secondary" @onclick="Save">Save</button>
+<button class="btn btn-secondary" @onclick="Read">Read</button>
+<button class="btn btn-secondary" @onclick="Delete">Delete</button>
+<button class="btn btn-secondary" @onclick="Clear">Clear</button>
+<button class="btn btn-secondary" @onclick="Paste">Paste</button>
+</td>
+<td>&nbsp;</td>
+<td width="240" align=right>
+<b><i><small><font color="blue">@PropertyName</font></small></i></b>
+</td>
+<td>&nbsp;</td>
+<td>
+<input class="form-control" @bind="@BindingValue"   />
+</td>
+</tr>
+
+
+
+@code {
+    [Parameter]
+    public string PropertyName { get; set; }
+
+    private string _value;
+
+    [Parameter]
+    public string BindingValue
+    {
+        get => _value;
+        set
+        {
+            if (_value == value ) return;
+            _value = value;
+            BindingValueChanged.InvokeAsync(value);
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> BindingValueChanged { get; set; }
+
+  public async Task Save()
+  {
+    await JSRuntime.InvokeVoidAsync("localStorage.setItem", PropertyName, BindingValue);
+  }
+
+  public async Task Read()
+  {
+    BindingValue = await JSRuntime.InvokeAsync<string>("localStorage.getItem", PropertyName);
+  }
+
+  public async Task Delete()
+  {
+        BindingValue = "";
+        await JSRuntime.InvokeAsync<string>("localStorage.removeItem", PropertyName);
+  }
+
+    public void Clear()
+  {
+        BindingValue = "";
+  }
+
+     public async Task Paste()
+  {
+        BindingValue = await JSRuntime.InvokeAsync<string>("clipboardCopy.readText");
+        await Save();
+  }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Read();
+    }
+}
