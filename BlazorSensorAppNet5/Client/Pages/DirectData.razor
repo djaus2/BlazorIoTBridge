@@ -151,7 +151,28 @@ else
             else
                 _Sensor.Value = 0.9;
         }
-        if ((_Sensor.SensorType == SensorType.accelerometer) || (_Sensor.SensorType == SensorType.environment))
+                if (_Sensor.SensorType == SensorType.accelerometer) 
+        {
+            value1 = _Sensor.Value;
+            _Sensor.Value = 0;
+            if (!string.IsNullOrEmpty(sensorvalue2))
+            {
+                double val;
+                if (double.TryParse(sensorvalue2, out val))
+                    value2 = val;
+                else
+                    value2 = 0.0;
+            }
+            if (!string.IsNullOrEmpty(sensorvalue3))
+            {
+                double val;
+                if (double.TryParse(sensorvalue3, out val))
+                    value3 = val;
+                else
+                    value3 = 0.0;
+            }
+        }
+        else if  (_Sensor.SensorType == SensorType.environment)
         {
             value1 = _Sensor.Value;
             _Sensor.Value = 0;
@@ -183,9 +204,13 @@ else
         StateHasChanged();
         //accelerometer = !accelerometer;
         //StateHasChanged();
-        if ((_Sensor.SensorType == SensorType.accelerometer) || (_Sensor.SensorType == SensorType.environment))
+        if (_Sensor.SensorType == SensorType.accelerometer) 
         {
             _Sensor.Values = new List<double> { (double)value1, (double)value2, (double)value3 };
+        }
+        else if (_Sensor.SensorType == SensorType.environment)
+        {
+            _Sensor.environ = new Environ { Temperature =(double)value1, Humidity =  (double)value2, Pressure = (double)value3 };
         }
         Guid guid = Guid.NewGuid();
         long TimeStamp = DateTime.Now.Ticks;

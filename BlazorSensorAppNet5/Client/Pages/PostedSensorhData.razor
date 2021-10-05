@@ -22,7 +22,7 @@ else
                 <th>Sensor Type</th>
                 <th>Timestamp</th>
                 <th>Value</th>
-                <th>State></th>
+                <th>State</th>
                 <th>Values</th>
                 <th>&nbsp;</th>
                 <th>&nbsp;</th>
@@ -49,7 +49,37 @@ else
                      }
 
                </tr>
-            }
+               @if (@sensor.environ != null)
+                {
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>...</td>
+                        <td>Temperature</td>
+                        <td>@sensor.environ.Temperature</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                     <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>...</td>
+                        <td>Hunidity</td>
+                        <td>@sensor.environ.Humidity</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <td>...</td>
+                        <td>Pressure</td>
+                        <td>@sensor.environ.Pressure</td>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                    </tr>
+                }
+        }
         </tbody>
     </table>
 }
