@@ -4,7 +4,7 @@
 
 <h1>Posted Sensor Data</h1>
 
-<p>This component demonstrates fetching data from the server.</p>
+<p>This component demonstrates fetching logged (submitted sensor) data from the server.</p>
 
 @if (sensors == null)
 {
@@ -36,7 +36,14 @@ else
                     <td>@sensor.No</td>
                     <td>@sensor.SensorType</td>
                     <td>@sensor.DateTime</td>
-                    <td>@sensor.Value</td>
+                    @if (sensor.Value != -1)
+                    {
+                        <td>@sensor.Value</td>
+                    }
+                    else
+                    {
+                        <td>&nbsp;</td>
+                    }
                     <td>@sensor.State</td>
                     @if (sensor.Values != null)
                     {

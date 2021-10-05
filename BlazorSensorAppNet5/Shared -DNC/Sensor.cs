@@ -15,7 +15,7 @@ namespace BlazorSensorAppNet5.SharedDNC
         public static int Count { get; set; } = 0;
         public int No { get; set; }
         public string Id { get; set; }
-        public double? Value { get; set; } = -1; // Signals for null
+        public double? Value { get; set; } = -1; // Signals null
 
         //public int TemperatureF => 32 + (int)(Value / 0.5556);
 

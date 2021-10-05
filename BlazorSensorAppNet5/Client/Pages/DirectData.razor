@@ -128,7 +128,7 @@ else
 
         Guid guid = Guid.NewGuid();
         long TimeStamp = DateTime.Now.Ticks;
-        _Sensor = new Sensor { Id = guid.ToString(), TimeStamp = TimeStamp };
+        _Sensor = new Sensor { Id = guid.ToString(), TimeStamp = TimeStamp, Value=-1 };
         _Sensor.SensorType = SensorType.accelerometer;
         _Sensor.No = Sensor.Count;
         if (!string.IsNullOrEmpty(sensortype))
@@ -142,7 +142,7 @@ else
             //if (val != null)
             //    _Sensor.SensorType = (SensorType)val;
         }
-        _Sensor.Value = 0.0;
+        _Sensor.Value = -1;
         if (!string.IsNullOrEmpty(sensorvalue))
         {
             double val;
@@ -206,10 +206,12 @@ else
         //StateHasChanged();
         if (_Sensor.SensorType == SensorType.accelerometer) 
         {
+            _Sensor.Value = -1;
             _Sensor.Values = new List<double> { (double)value1, (double)value2, (double)value3 };
         }
         else if (_Sensor.SensorType == SensorType.environment)
         {
+            _Sensor.Value = -1;
             _Sensor.environ = new Environ { Temperature =(double)value1, Humidity =  (double)value2, Pressure = (double)value3 };
         }
         Guid guid = Guid.NewGuid();

@@ -7,7 +7,7 @@
 
 <h1>Device to Cloud Sensor Telemetry Data</h1>
 
-<p>This component demonstrates fetching data from the server.</p>
+<p>This component demonstrates fetching IoT D2C data from the IoT device via the server.</p>
 
 @if (messagesJson == null)
 {
@@ -69,7 +69,30 @@ else
                     {
                         if (property.Value != null)
                         {
-                            if (property.Value.GetType().Name == "List`1") // i.e. System.Collections.Generic.List<T> where T is a simple Value Type ??
+                            if (property.Value.GetType().Name == "ExpandoObject")
+                            {
+                                dynamic expandoValues = property.Value;
+
+                                bool isNullOrEmpty = true;
+                                if (expandoValues != null)
+                                {
+                                    foreach (var propertyExpando in (IDictionary<String, Object>)expandoValues)
+                                    {
+                                        if (isNullOrEmpty)
+                                        {
+                                            Log( property.Key, " ... has properties:", property.Value.GetType());
+                                            isNullOrEmpty = false;
+                                        }
+                                        Log("",string.Format("{0,18} : {1,-19}",propertyExpando.Key, propertyExpando.Value), propertyExpando.Value.GetType());
+                                    }
+                                    if (isNullOrEmpty)
+                                        Log (property.Key, " ... has no properties", property.Value.GetType());
+                                }
+                                else
+                                    Log( property.Key, " ...is null", property.Value.GetType());
+
+                            }
+                            else if (property.Value.GetType().Name == "List`1") // i.e. System.Collections.Generic.List<T> where T is a simple Value Type ??
                             {
                                 dynamic values = property.Value;
                                 if (values.Count != 0)
@@ -77,7 +100,7 @@ else
                                     string listType = values[0].GetType().FullName;
                                     if (listType == 24.3D.GetType().FullName)
                                     {
-                                        Log(String.Format("{0,15} is List of double:", property.Key));
+                                        Log(property.Key," ... is List of double:");
                                         foreach (var x in values)
                                         {
                                             double xx = (double)x;
@@ -86,7 +109,7 @@ else
                                     }
                                     else if (listType == 137.GetType().FullName)
                                     {
-                                        Log(String.Format("{0,15} is List of Int64:", property.Key));
+                                        Log( property.Key, " ... is List of Int64:");
                                         foreach (var x in values)
                                         {
                                             int xx = (int)x;
@@ -95,7 +118,7 @@ else
                                     }
                                     else if (listType == "string".GetType().FullName)
                                     {
-                                        Log(String.Format("{0,15} is List of string:", property.Key));
+                                        Log(property.Key," ... is List of string:");
                                         foreach (var x in values)
                                         {
                                             string xx = (string)x;
@@ -104,7 +127,7 @@ else
                                     }
                                     else if (listType == false.GetType().FullName)
                                     {
-                                        Log(String.Format("{0,15} is List of bool:", property.Key));
+                                        Log(property.Key," ... is List of bool:");
                                         foreach (var x in values)
                                         {
                                             bool xx = (bool)x;
@@ -113,7 +136,7 @@ else
                                     }
                                     else if (listType == DateTime.Now.GetType().FullName)
                                     {
-                                        Log(String.Format("{0,15} is List of DateTime:", property.Key));
+                                        Log(property.Key," ... is List of DateTime:");
                                         foreach (var x in values)
                                         {
                                             DateTime xx = (DateTime)x;
@@ -139,8 +162,17 @@ else
                                 else
                                     Log( property.Key, property.Value, property.Value.GetType());
                             }
-                            else
+                           else
+			                {
+                                if (property.Value.GetType().Name == "Double")
+                                {
+                                    // Skip null integers. -1 is used as Json value can't be null
+                                    double vald = (double)property.Value;
+                                    if (vald == -1)
+                                        continue;
+                                }
                                 Log(property.Key, property.Value, property.Value.GetType()); //, property.Value.GetType()); //, property.Value.GetType());
+			                }
                         }
                     }
                     Logg("&nbsp;");
@@ -201,7 +233,18 @@ else
         string msg2 = string.Format("{0}",omsg2);
         string msg3 = string.Format("{0}",omsg3);
         string msg4 = string.Format("{0}",omsg4);
-        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "<td>" + msg4 + "</td>" + "</tr>";
+        msgraw += "<tr>" + "<td>" + msg + ":</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "<td>" + msg4 + "</td>" + "</tr>";
+        LogMsg = new MarkupString(msgraw);
+        StateHasChanged();
+    }
+
+    void Log4(object omsg, object omsg2, object omsg3, object omsg4)
+    {
+        string msg = string.Format("{0}",omsg);
+        string msg2 = string.Format("{0}",omsg2);
+        string msg3 = string.Format("{0}",omsg3);
+        string msg4 = string.Format("{0}",omsg4);
+        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td><table><tr><td>" + msg2 + "</td><td align=\"right\">" + msg3 + "</td></tr></table></td>" + "<td>" + msg4 + "</td>" + "</tr>";
         LogMsg = new MarkupString(msgraw);
         StateHasChanged();
     }

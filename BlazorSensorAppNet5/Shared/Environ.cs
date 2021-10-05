@@ -9,5 +9,16 @@ namespace BlazorSensorAppNet5
         public double Temperature { get; set; }
         public double Humidity { get; set; }
         public double Pressure { get; set; }
+
+        public Environ ()
+        {
+
+        }
+        public Environ (double temp, double humid, double press)
+        {
+            Temperature = temp;
+            Humidity = humid;
+            Pressure = press;
+        }
     }
 }
