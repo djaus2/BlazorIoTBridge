@@ -29,7 +29,12 @@ namespace BlazorSensorAppNet5.Server.Controllers
         public async Task<IActionResult> Post(Command obj)
         {
             Command cmd = obj;
-            if (cmd.Action =="STARTQ")
+            if (cmd.Invoke ==true)
+            {
+                Task t3 = Task.Run(() => InvokeDeviceMethod.Program.Main(new string[] { cmd.Action, cmd.Parameter.ToString() } ));
+                await t3;
+            }
+            else if (cmd.Action =="STARTQ")
             {
                 if(SensorController.PostLog==null)
                     SensorController.StartQ();

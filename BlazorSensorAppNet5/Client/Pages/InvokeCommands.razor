@@ -1,0 +1,51 @@
+﻿@page "/invokecommands"
+
+
+@inject HttpClient client
+
+<h1>Invoke Commands on Device via the Hub</h1>
+
+<button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
+Command:&nbsp;<input type="text" @bind="@command"/><br />
+Command:&nbsp;<input type="text" @bind="@value"/> <br />@Response;
+
+@code {
+    private int currentCount = 0;
+    private string command { get; set; } = "SetTelemetryInterval";
+    private string value { get; set; } = "10";
+    bool run = true;
+    string Response = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await base.OnInitializedAsync();
+    }
+
+
+    private async Task StartReads()
+    {
+
+        int val;
+        BlazorSensorAppNet5.Shared.Command cmd;
+        if (!int.TryParse(value, out val))
+            cmd = new BlazorSensorAppNet5.Shared.Command { Action = command };
+        else
+            cmd = new BlazorSensorAppNet5.Shared.Command { Action = command, Parameter = val };
+        cmd.Invoke = true;
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("PostedData", cmd,null);
+        command = "";
+        value = "";
+        cmd = null;
+        if (response.IsSuccessStatusCode)
+        {
+            System.Diagnostics.Debug.WriteLine("Sent OK");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+        }
+    }
+
+
+}

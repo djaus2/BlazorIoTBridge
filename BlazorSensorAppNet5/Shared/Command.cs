@@ -10,5 +10,6 @@ namespace BlazorSensorAppNet5.Shared
     {
         public string Action { get; set; }
         public int? Parameter { get; set; }
+        public bool Invoke { get; set; } = false;
     }
 }

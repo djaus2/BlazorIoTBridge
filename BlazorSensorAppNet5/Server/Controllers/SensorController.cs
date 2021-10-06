@@ -9,6 +9,7 @@ using System.Reflection.Metadata;
 using Newtonsoft.Json;
 using System.Threading;
 using System.Collections.Concurrent;
+using Microsoft.Azure.Devices;
 
 namespace BlazorSensorAppNet5.Server.Controllers
 {
