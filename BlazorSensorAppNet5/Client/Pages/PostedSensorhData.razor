@@ -36,7 +36,7 @@ else
                     <td>@sensor.No</td>
                     <td>@sensor.SensorType</td>
                     <td>@sensor.DateTime</td>
-                    @if (sensor.Value != -1)
+                    @if (sensor.Value != Sensor.iNull)
                     {
                         <td>@sensor.Value</td>
                     }
@@ -112,7 +112,7 @@ else
     private async Task Refresh()
     {
         string Result = "Busy";
-        var data = await Http.GetFromJsonAsync<Sensor[]>("PostedData");
+        var data = await Http.GetFromJsonAsync<Sensor[]>("PostedTelemetryLog");
         sensors = new List<Sensor> ( data );
         StateHasChanged();
     }

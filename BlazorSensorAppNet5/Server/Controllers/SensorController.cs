@@ -13,12 +13,16 @@ using Microsoft.Azure.Devices;
 
 namespace BlazorSensorAppNet5.Server.Controllers
 {
+    /// <summary>
+    /// Gets Telemetry from Device via Http Post and forwards to SendTelemetry for onforwarding to the Hub
+    /// </summary>
     [ApiController]
     [Route("[controller]")]
     public class SensorController : ControllerBase
     {
 
-        private readonly ILogger<SensorController> logger;
+        private readonly AppSettings appsettings;
+
 
         private static SimulatedDeviceCS _SimulatedDeviceCS;
 
@@ -26,16 +30,14 @@ namespace BlazorSensorAppNet5.Server.Controllers
 
 
 
-        public SensorController(ILogger<SensorController> logger)
+        public SensorController(AppSettings _appsettings)
         {
-            this.logger = logger;
+            this.appsettings = _appsettings;
+
             if (_SimulatedDeviceCS == null)
             {
-                Count = 0;
-                _SimulatedDeviceCS = new SimulatedDeviceCS();
+                _SimulatedDeviceCS = new SimulatedDeviceCS(appsettings.IOTHUB_DEVICE_CONN_STRING);
             }
-            if (Commands == null)
-                StartQ();
         }
 
         ~SensorController()
@@ -45,79 +47,14 @@ namespace BlazorSensorAppNet5.Server.Controllers
 
         private static string block = "BLOCK";
 
-        private static ConcurrentQueue<Command> Commands { get; set; } = null;
 
-        public static Command Command
-        {
-            get
-            {
-                if (Commands == null)
-                    return null;
-                // Note Peeks, doesn't dequeue the value.
-                Command val;
-                //Monitor.Enter(block);
-                if (Commands.Count() == 0)
-                    val = null;
-                else
-                    while(!Commands.TryPeek(out val));
-                //Monitor.Exit(block);
-                return val;
-            }
-            set
-            {
-                if (Commands == null)
-                    return;
-                //Monitor.Enter(block);
-                Commands.Enqueue(value);
-                //Monitor.Exit(block);
-            }
-        }
-
-        /// <summary>
-        /// Same as Command=>Get but dequeues it.
-        /// </summary>
-        /// <returns></returns>
-        public static Command GetCommand()
-        {
-            Command val;
-            if (Commands == null)
-                val = null;
-
-            //Monitor.Enter(block);
-            else if (Commands.Count() == 0)
-                val = null;
-            else
-            {
-                while ( !Commands.TryDequeue(out val));
-            }
-            //Monitor.Exit(block);
-            return val;
-        }
-
-        public static void StartQ()
-        {
-            if (Commands == null)
-                Commands = new ConcurrentQueue<Command>();
-        }
-
-
-        [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            await Task.Delay(1);
-            Command val = GetCommand();
-            if (val == null)
-                val = new Command();
-            return Ok(val);
-        }
-
-        public static List<Sensor> PostLog { get; set; }
 
         [HttpPost]
         public async Task<IActionResult> Post(object obj)
         {
             int state;
             Sensor sensor;
+
 
             string json = obj.ToString();
 
@@ -127,7 +64,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 switch (state)
                 {
                     case 1:
-                        PostLog = new List<Sensor>();
+                        PostedTelemetryLogController.PostLog = new List<Sensor>();
                         break;
                 }
                 return Ok(Count);
@@ -146,12 +83,12 @@ namespace BlazorSensorAppNet5.Server.Controllers
                     //        await SimulatedDevice.StartMessageSending();
                     await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //
 
-                    if (PostLog == null)
+                    if (PostedTelemetryLogController.PostLog == null)
                     {
                         Count = 0;
-                        PostLog = new List<Sensor>();
+                        PostedTelemetryLogController.PostLog = new List<Sensor>();
                     }
-                    PostLog.Add(sensor);
+                    PostedTelemetryLogController.PostLog.Add(sensor);
                     //await Task.Delay(1000);
                     Count++;
                     return Ok(Count);

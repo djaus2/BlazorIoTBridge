@@ -17,7 +17,11 @@ namespace BlazorSensorAppNet5.Server.Controllers
     // This application uses the Azure IoT Hub device SDK for .NET
     // For samples see: https://github.com/Azure/azure-iot-sdk-csharp/tree/master/iothub/device/samples
 
-
+    /// <summary>
+    /// Forward Telemetry from SensorController as a simulated device, using Azure IoT Huvb C# SDK
+    /// .. to the IoT Hub
+    /// Runs as a simulated IOT Hub Device.
+    /// </summary>
     public class SimulatedDeviceCS
     {
         private static DeviceClient s_deviceClient;
@@ -33,9 +37,12 @@ namespace BlazorSensorAppNet5.Server.Controllers
         // - create a launchSettings.json (see launchSettings.json.template) containing the variable
         private static string s_connectionString = Environment.GetEnvironmentVariable("IOTHUB_DEVICE_CONN_STRING");
 
-
-        // Async method to send simulated telemetry
-        public  async Task StartSendDeviceToCloudMessageAsync(Sensor Sensor)
+        /// <summary>
+        /// Async method to send simulated telemetry,
+        /// Sends a single message.
+        /// Called by SensorController-Post
+        /// </summary>
+        public async Task StartSendDeviceToCloudMessageAsync(Sensor Sensor)
         {
             System.Diagnostics.Debug.WriteLine("===== SendDeviceToCloudMessageAsync In =====");
             var messageString = JsonConvert.SerializeObject(Sensor);
@@ -57,12 +64,14 @@ namespace BlazorSensorAppNet5.Server.Controllers
             }
         }
 
- 
-        public  SimulatedDeviceCS()
+        /// <summary>
+        /// Constructor: Instantiate the DeviceClient.
+        /// </summary>
+        public  SimulatedDeviceCS(string _connection_string)
         {
             System.Diagnostics.Debug.WriteLine("===== Starting StartMessageSending =====");
 
-            s_connectionString = Shared.AppSettings.evIOTHUB_DEVICE_CONN_STRING;
+            s_connectionString = _connection_string; //Shared.AppSettings.settings.IOTHUB_DEVICE_CONN_STRING;
 
             System.Diagnostics.Debug.WriteLine("Code from IoT Hub Quickstarts from Azure IoT Hub SDK");
             System.Diagnostics.Debug.WriteLine("Using Env Var IOTHUB_DEVICE_CONN_STRING = " + s_connectionString);
@@ -72,6 +81,10 @@ namespace BlazorSensorAppNet5.Server.Controllers
             System.Diagnostics.Debug.WriteLine("===== Finished StartMessageSending =====");
         }
 
+        /// <summary>
+        /// Start sending random telemetry continuously.
+        /// Not used.
+        /// </summary>
         public  async Task SendDeviceToCloudMessagesAsync()
         {
             // Initial telemetry values

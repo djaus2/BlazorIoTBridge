@@ -19,83 +19,79 @@ namespace BlazorSensorAppNet5.Server.Controllers
     public class CommandController : ControllerBase
     {
 
-        private readonly ILogger<SensorController> logger;
-
-        private static SimulatedDeviceCS _SimulatedDeviceCS;
-
-        private static int Count { get; set; } = 0;
-
-        private static List<dynamic> D2CMessages { get; set; }
-        private static List<string> D2CMessagesJson { get; set; }
+        private readonly ILogger<CommandController> logger;
 
 
+        //////private static int Count { get; set; } = 0;
 
-        public CommandController(ILogger<SensorController> logger)
+        //////private static List<dynamic> D2CMessages { get; set; }
+        //////private static List<string> D2CMessagesJson { get; set; }
+
+
+
+        public CommandController(ILogger<CommandController> logger)
         {
             this.logger = logger;
-            if (D2CMessages == null)
-            {
-                Count = 0;
-                D2CMessages = new List<dynamic>();
-                D2CMessagesJson = new List<string>();
-            }
+            //////if (D2CMessages == null)
+            //////{
+            //////    Count = 0;
+            //////    D2CMessages = new List<dynamic>();
+            //////    D2CMessagesJson = new List<string>();
+            //////}
         }
 
         ~CommandController()
         {
-            _SimulatedDeviceCS = null;
         }
 
-        private static string block = "BLOCK";
+        //////private static ConcurrentQueue<Command> Commands { get; set; } = null;
 
-        private static ConcurrentQueue<Command> Commands { get; set; } = null;
+        //////public static Command Command
+        //////{
+        //////    get
+        //////    {
+        //////        if (Commands == null)
+        //////            return null;
+        //////        // Note Peeks, doesn't dequeue the value.
+        //////        Command val;
+        //////        //Monitor.Enter(block);
+        //////        if (Commands.Count() == 0)
+        //////            val = null;
+        //////        else
+        //////            while(!Commands.TryPeek(out val));
+        //////        //Monitor.Exit(block);
+        //////        return val;
+        //////    }
+        //////    set
+        //////    {
+        //////        if (Commands == null)
+        //////            return;
+        //////        //Monitor.Enter(block);
+        //////        Commands.Enqueue(value);
+        //////        //Monitor.Exit(block);
+        //////    }
+        //////}
 
-        public static Command Command
-        {
-            get
-            {
-                if (Commands == null)
-                    return null;
-                // Note Peeks, doesn't dequeue the value.
-                Command val;
-                //Monitor.Enter(block);
-                if (Commands.Count() == 0)
-                    val = null;
-                else
-                    while(!Commands.TryPeek(out val));
-                //Monitor.Exit(block);
-                return val;
-            }
-            set
-            {
-                if (Commands == null)
-                    return;
-                //Monitor.Enter(block);
-                Commands.Enqueue(value);
-                //Monitor.Exit(block);
-            }
-        }
+        ///////// <summary>
+        ///////// Same as Command=>Get but dequeues it.
+        ///////// </summary>
+        ///////// <returns></returns>
+        //////public static Command GetCommand()
+        //////{
+        //////    Command val;
+        //////    if (Commands == null)
+        //////        val = null;
 
-        /// <summary>
-        /// Same as Command=>Get but dequeues it.
-        /// </summary>
-        /// <returns></returns>
-        public static Command GetCommand()
-        {
-            Command val;
-            if (Commands == null)
-                val = null;
-
-            //Monitor.Enter(block);
-            else if (Commands.Count() == 0)
-                val = null;
-            else
-            {
-                while ( !Commands.TryDequeue(out val));
-            }
-            //Monitor.Exit(block);
-            return val;
-        }
+        //////    //Monitor.Enter(block);
+        //////    else if (Commands.Count() == 0)
+        //////        val = null;
+        //////    else
+        //////    {
+        //////        while ( !Commands.TryDequeue(out val));
+        //////    }
+        //////    //Monitor.Exit(block);
+        //////    return val;
+        //////}
 
         public static void StartQ()
         {

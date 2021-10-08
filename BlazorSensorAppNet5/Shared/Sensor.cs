@@ -4,18 +4,24 @@ using System.Text;
 using System.Threading;
 using System.Text.Json.Serialization;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
+using BlazorSensorAppNet5.Shared;
 
 namespace BlazorSensorAppNet5.Shared
 {
-
     public class Sensor
     {
+        public const double iNull = (double) int.MinValue;
+
+        public delegate Task CommandCallback(string command, int parameter);
+
         private long timeStamp;
 
         public static int Count { get; set; } = 0;
         public int No { get; set; }
         public string Id { get; set; }
-        public double? Value { get; set; } = -1;// Signals null
+        public double? Value { get; set; } = Sensor.iNull;// Signals null
 
         //public int TemperatureF => 32 + (int)(Value / 0.5556);
 
@@ -43,11 +49,14 @@ namespace BlazorSensorAppNet5.Shared
 
     }
 
-    public class AppSettings
-    {
-        public static string evIOTHUB_DEVICE_CONN_STRING { get; set; }
-        public string IOTHUB_DEVICE_CONN_STRING { get; set; }
-    }
+    //public class AppSettings
+    //{
+    //    public string Hub { get; set; }
+    //    public static Settings settings { get; set; }
+    //    public  Settings Settings { get; set; }
+    //    public static string evIOTHUB_DEVICE_CONN_STRING { get; set; }
+    //    public string IOTHUB_DEVICE_CONN_STRING { get; set; }
+    //}
 
     public enum SensorType {temperature,pressure,humidity,luminosity,accelerometer,environment,sswitch}
 }

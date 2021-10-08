@@ -53,7 +53,7 @@ else
         msgraw = "";
         long lastTS = 0;
         string Result = "Busy";
-        var data = await Http.GetFromJsonAsync<string[]>("D2C");
+        var data = await Http.GetFromJsonAsync<string[]>("D2CTelemetryLog");
         messagesJson = new List< string> ( data );
         foreach (var json in messagesJson)
         {
@@ -168,7 +168,7 @@ else
                                 {
                                     // Skip null integers. -1 is used as Json value can't be null
                                     double vald = (double)property.Value;
-                                    if (vald == -1)
+                                    if (vald == Sensor.iNull)
                                         continue;
                                 }
                                 Log(property.Key, property.Value, property.Value.GetType()); //, property.Value.GetType()); //, property.Value.GetType());

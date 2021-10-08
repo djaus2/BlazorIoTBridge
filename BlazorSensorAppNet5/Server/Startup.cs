@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using System.Linq;
 
 using BlazorSensorAppNet5.Shared;
+using System;
 
 namespace BlazorSensorAppNet5.Server
 {
@@ -16,10 +17,23 @@ namespace BlazorSensorAppNet5.Server
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
-            var mySettingsConfig = new AppSettings();
-            configuration.GetSection("AppSettings").Bind(mySettingsConfig);
-            Shared.AppSettings.evIOTHUB_DEVICE_CONN_STRING = mySettingsConfig.IOTHUB_DEVICE_CONN_STRING;
+   
+            //      var config = new ConfigurationBuilder()
+            //.SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+            //.AddJsonFile("appsettings.json").Build();
+            //      //Settings mySettingsConfig = new Settings();
+            //      //configuration.GetSection("AppSettings").Bind(mySettingsConfig);
+
+            //      //var section = configuration.GetSection("AppSettings");
+            //      //var set = section.Get<AppSettings>();
+
+            //      var settings3 = config.GetSection("AppSettings");//.Get<Settings>();
+            //     // Shared.AppSettings.settings = mySettingsConfig;
+            //      //.evIOTHUB_DEVICE_CONN_STRING = mySettingsConfig.IOTHUB_DEVICE_CONN_STRING;
+            //      //Shared.AppSettings.settings.IOTHUB_DEVICE_CONN_STRING = mySettingsConfig.IOTHUB_DEVICE_CONN_STRING;
         }
+
+   
 
         public IConfiguration Configuration { get; }
 
@@ -30,6 +44,21 @@ namespace BlazorSensorAppNet5.Server
 
             services.AddControllersWithViews();
             services.AddRazorPages();
+
+            services.AddSingleton<IConfiguration>(Configuration);
+
+            //services.AddSingleton (IAppSettings,AppSettings)
+
+            //services.AddSingleton(Configuration.GetSection("Setx").Get<Setx>());
+
+            /*var section = Configuration.GetSection(nameof(Setx));
+            var appSettings = section.Get<Setx>();*/
+                     var config = new ConfigurationBuilder()
+      .AddJsonFile("appsettings.json").Build();
+
+            var _appSettings = config.GetSection("AppSettings").Get<AppSettings>();
+
+            services.AddSingleton(_appSettings);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -7,11 +7,12 @@
 
 <button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
 Command:&nbsp;<input type="text" @bind="@command"/><br />
-Command:&nbsp;<input type="text" @bind="@value"/> <br />@Response;
+Command:&nbsp;<input type="text" @bind="@value"/> <br />
+@((MarkupString)Response)
 
 @code {
     private int currentCount = 0;
-    private string command { get; set; } = "SetTelemetryInterval";
+    private string command { get; set; } = "StartListening";
     private string value { get; set; } = "10";
     bool run = true;
     string Response = "";
@@ -25,7 +26,8 @@ Command:&nbsp;<input type="text" @bind="@value"/> <br />@Response;
 
     private async Task StartReads()
     {
-
+        Response = "Busy";
+        StateHasChanged();
         int val;
         BlazorSensorAppNet5.Shared.Command cmd;
         if (!int.TryParse(value, out val))
@@ -33,18 +35,23 @@ Command:&nbsp;<input type="text" @bind="@value"/> <br />@Response;
         else
             cmd = new BlazorSensorAppNet5.Shared.Command { Action = command, Parameter = val };
         cmd.Invoke = true;
-        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("PostedData", cmd,null);
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("CommansdsDirectFromHub", cmd,null);
         command = "";
         value = "";
         cmd = null;
+        string content = await response.Content.ReadAsStringAsync();
         if (response.IsSuccessStatusCode)
         {
             System.Diagnostics.Debug.WriteLine("Sent OK");
+            Response = $"Sent OkK<br/>{content}";
         }
         else
         {
             System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+            Response = $"Not OK: {response.StatusCode} {response.ReasonPhrase}";
+            Response += $"<br/>{content}";
         }
+        StateHasChanged();
     }
 
 

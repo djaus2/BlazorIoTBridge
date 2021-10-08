@@ -7,6 +7,7 @@
 <button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
 Command:&nbsp;<input type="text" @bind="@command"/><br />
 Command:&nbsp;<input type="text" @bind="@value"/>
+<button class="btn btn-primary" @onclick="Check">Check for Commmand</button><br />
 
 @code {
     private int currentCount = 0;
@@ -17,7 +18,7 @@ Command:&nbsp;<input type="text" @bind="@value"/>
     protected override async Task OnInitializedAsync()
     {
         var cmd = new BlazorSensorAppNet5.Shared.Command { Action = "STARTQ" };
-        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("PostedData", cmd,null);
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("Commands2Device", cmd,null);
     }
 
     private async Task StartReads()
@@ -28,7 +29,7 @@ Command:&nbsp;<input type="text" @bind="@value"/>
             cmd = new BlazorSensorAppNet5.Shared.Command { Action = command };
         else
             cmd = new BlazorSensorAppNet5.Shared.Command { Action = command, Parameter = val };
-        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("PostedData", cmd,null);
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("Commands2Device", cmd,null);
         command = "";
         value = "";
         cmd = null;
@@ -41,6 +42,18 @@ Command:&nbsp;<input type="text" @bind="@value"/>
             System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
         }
        
+    }
+
+    private async Task Check()
+    {
+        string Command = "";
+        string Param = "";
+        //Program
+        //command = Command;
+        //value = Param;
+
+        StateHasChanged();
+        await StartReads();
     }
 
 }

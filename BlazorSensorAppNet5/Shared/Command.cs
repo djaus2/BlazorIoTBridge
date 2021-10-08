@@ -9,7 +9,7 @@ namespace BlazorSensorAppNet5.Shared
     public class Command
     {
         public string Action { get; set; }
-        public int? Parameter { get; set; }
+        public int? Parameter { get; set; } = (int)Sensor.iNull; //Used to represent null
         public bool Invoke { get; set; } = false;
     }
 }
