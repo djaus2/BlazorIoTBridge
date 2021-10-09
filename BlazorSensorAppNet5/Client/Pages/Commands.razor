@@ -1,28 +1,63 @@
 ﻿@page "/commands"
-
+@using BlazorSensorAppNet5.Shared
 @inject HttpClient client
 
 <h1>Commands</h1>
 
 <button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
 Command:&nbsp;<input type="text" @bind="@command"/><br />
-Command:&nbsp;<input type="text" @bind="@value"/>
-<button class="btn btn-primary" @onclick="Check">Check for Commmand</button><br />
+Parameter:&nbsp;<input type="text" @bind="@value"/>
+<br />
+
+@((MarkupString)Response)
+<br />
+<button class="btn btn-primary" @onclick="GetCommands">Get Commands to device in Q</button><br />
+
+@if (commands != null)
+{
+    @if (commands.Count() != 0)
+    {
+        <h3>Commands Queue direct to Device</h3>
+        <table class="t1">
+            <tr>
+            <th>Action</th>
+            <th>Parameter</th>
+            </tr>
+        @foreach (var @cmd in @commands)
+        {
+             <tr>
+                 <td>@cmd.Action</td>
+                    @if (cmd.Parameter != iNull )
+                    {
+                        <td>@cmd.Parameter</td>
+                    }
+                    else
+                    {
+                        <td>&nbsp;</td>
+                    }
+            </tr>
+        }
+        </table>
+    }
+}
 
 @code {
     private int currentCount = 0;
-    private string command { get; set; } = "";
+    private string command { get; set; } = "StartQ";
     private string value { get; set; } = "";
     bool run = true;
+    string Response = "";
+    List<Command> commands = null;
+    int iNull = (int)BlazorSensorAppNet5.Shared.Sensor.iNull;
 
     protected override async Task OnInitializedAsync()
     {
-        var cmd = new BlazorSensorAppNet5.Shared.Command { Action = "STARTQ" };
-        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("Commands2Device", cmd,null);
+        await base.OnInitializedAsync();
     }
 
     private async Task StartReads()
     {
+        Response = "Busy";
         int val;
         BlazorSensorAppNet5.Shared.Command cmd;
         if (!int.TryParse(value, out val))
@@ -33,27 +68,30 @@ Command:&nbsp;<input type="text" @bind="@value"/>
         command = "";
         value = "";
         cmd = null;
+        string content = await response.Content.ReadAsStringAsync();
         if (response.IsSuccessStatusCode)
         {
             System.Diagnostics.Debug.WriteLine("Sent OK");
+            Response = $"Sent Ok<br/>{content}";
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+            System.Diagnostics.Debug.WriteLine("Not OK: {0}",response.ReasonPhrase);
+            Response = $"Not OK: {response.ReasonPhrase}";
+            Response += $"<br/>{content}";
         }
+        await GetCommands();
        
     }
 
-    private async Task Check()
+    private async Task GetCommands()
     {
-        string Command = "";
-        string Param = "";
-        //Program
-        //command = Command;
-        //value = Param;
-
-        StateHasChanged();
-        await StartReads();
+        var response = await client.GetFromJsonAsync<Command[]>("CommansdsDirectFromHub");
+        if (response != null)
+            commands = response.ToList();
+        else
+            commands = null;
     }
+
 
 }

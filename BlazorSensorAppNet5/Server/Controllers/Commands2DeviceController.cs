@@ -63,6 +63,19 @@ namespace BlazorSensorAppNet5.Server.Controllers
         }
 
         private static bool started = false;
+
+        public static void ResetQ(bool state)
+        {
+            if (Commands == null)
+                Commands = new System.Collections.Concurrent.ConcurrentQueue<Command>();
+            else
+                Commands.Clear();
+            if (PostedTelemetryLogController.PostLog == null)
+                PostedTelemetryLogController.PostLog = new List<Sensor>();
+
+            started = state;
+        }
+
         public static bool isfirst = true;
         [HttpPost]
         public async Task<IActionResult> Post(Command obj)
@@ -71,34 +84,55 @@ namespace BlazorSensorAppNet5.Server.Controllers
 
             if (!cmd.Invoke)
             {
-                if (cmd.Action == "STARTQ")
+                if (cmd.Action.ToUpper() == "STARTQ")
                 {
-                    if (Commands == null)
-                        Commands = new System.Collections.Concurrent.ConcurrentQueue<Command>();
-                    if (PostedTelemetryLogController.PostLog == null)
-                        PostedTelemetryLogController.PostLog = new List<Sensor>();
+                    ResetQ(true);
+                }
+                else if (cmd.Action.ToUpper() == "STOPQ")
+                {
+                    ResetQ(false);
                 }
                 else
                 {
-                    if (Commands == null)
-                        Commands = new System.Collections.Concurrent.ConcurrentQueue<Command>();
-                    SetCommand(cmd);
-                    System.Diagnostics.Debug.WriteLine($"Number of comamnds in Q: {Commands.Count()}");
+                    if (started)
+                    {
+                        SetCommand(cmd);
+                        System.Diagnostics.Debug.WriteLine($"Number of comamnds in Q: {Commands.Count()}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Device Commands Q not started");
+                        return BadRequest($"{cmd.Action} : Device Commands Q not started. Send [StartQ]");
+                    }
+                    
                 }
                 await Task.Delay(333);
-                return Ok(cmd);
+                return Ok($"Number of comamnds in Q: {Commands.Count()}");
             }
             else
-                return BadRequest($"{cmd} : Probably call to wrong controller. Try DirectCommansdsFromHub.");
+                return BadRequest($"{cmd.Action} : Probably call to wrong controller. Try CommansdsDirectFromHubController.");
         }
 
         [HttpGet]
         public IActionResult Get()
         {
-            if (Commands == null)
-                Commands = new System.Collections.Concurrent.ConcurrentQueue<Command>();
-            Command cmd = GetCommand();
+            Command cmd;
+            if (!started)
+            {
+                cmd = new Command { Action = "", Parameter = 0 };
+            }
+            else
+            {
+                if (Commands == null)
+                    Commands = new System.Collections.Concurrent.ConcurrentQueue<Command>();
+                cmd = GetCommand();
+            }
+            if (cmd == null)
+                cmd = new Command { Action = "", Parameter = 0 };
+            else
+            { int i = 0; }
             return Ok(cmd);
         }
+
     }
 }

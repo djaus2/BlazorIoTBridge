@@ -1,64 +1,92 @@
 ﻿@page "/"
 @page "/index"
-
 @using System.Net.Http
 @inject HttpClient Http
 
 <h1> Blazor Simulated Azure IoT Hub Device with Sensors</h1>
-<p>@Result</p>
-<font color="blue">
-    A Blazor WebAssembly app <i>(with PWA set)</i>.<br />
-    Simulates an IoT Device with a Tempedrature, Humidity or Acceleraometer sensor.<br />
-    Can choose sensor type and set data in client.<br />
-    That is then sent to the Service which then forwards it as an IoT Hub message to an Azure IoT Hub.
-</font>
-<br />
-<br />
-IoT Hub Device Connection String is embedded in Server appsettings.json
-<br />
-
-<h2>Pages:</h2>
 <ul>
-    <li>
-        <b>Send Data</b>
+    <li><font color="blue">A Blazor WebAssembly app interacting with an IoT Hub.</font></li>
+    <li>The backend simulates an Azure IoT Hub .NET SDK device with a Tempedrature, Humidity,Acceleraometer or Environment  sensor.</li>
+    <li>Can choose sensor type and set data in client.</li>
+    <li>That is then sent to the Server which then forwards it as an IoT Hub message to an Azure IoT Hub.
         <ul>
-            <li>
-                Set sensor data ready to send
-                <ul>
-                    <li>Choose sensor type</li>
-                    <li>Set value/s</li>
-                    <li>Set to only one message to send</li>
-                </ul>
-            </li>
-            <li>Then press [Send]</li>
+            <li>Encompasses the SDK's Quickstart Simulated Device sample console app as a .Net5 libary.</li>
         </ul>
-        <b>Alternatively can auto-generate random sensor data to send</b>
-        <ul>
-            <li>Set number of messages to send</li>
-            <li>Set period between messages</li>
-            <li>Then press [Send]</li>
-            <li><i>Sensor Type with each message is random as well.</i></li>
-        </ul>
+    </li>
+    <li>Can view local log of sent messages.</li>
+    <li>Also can query IoT Hub for sent messages (D2C).</li>
+    <li><font color="purple"><b>A real device <i>(eg. Arduino or RPi)</i> can forward telemetry to the service for onforwarding.</b></font></li>
+    <uL>
+        <li>Can be forwarded over Http</li>
+        <li>There is also a separate .Net5 console app for serial forwarding, which then forwards over Http to the server.</li>
+    </uL>
+    <li>IoT Hub Device Connection Strings are embedded in Server appsettings.json Can set them her in Settings</li>
+</ul>
+<h2>Index of Functionality</h2>
+<ul>
+    <li><b>Send Data</b>
+            <ul>
+                <li>Choose sensor type, then set value/s</li>
+                <li>Set to only one message to send</li>
+                <li>Then press [Send]</li>
+            </ul>
+        <br />
+            <b>Alternatively can auto-generate random sensor data to send</b>
+            <ul>
+                <li>Set number of messages to send, and set period between messages</li>
+                <li>Then press [Send]</li>
+                <li><i>Sensor Type with each message is random as well.</i></li>
+            </ul>>
     </li>
     <li>
         <b>Direct Temp sample</b>
         <ul>
-            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Temperature data.</li>
-            <li>Auto-sends when navigated to.</li>
+            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Temperature data. <i>Auto-sends when navigated to.</i></li>
         </ul>
     </li>
     <li>
         <b>Direct Hunid sample</b>
         <ul>
-            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Hunidity data.</li>
-            <li>Auto-sends when navigated to.</li>
+            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Hunidity data. <i>Auto-sends when navigated to.</i></li>
         </ul>
     </li>
     <li>
         <b>Direct Accel sample</b>
         <ul>
-            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Accelerometer data.</li>
-            <li>Auto-sends when navigated to.</li>
+            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Accelerometer data. <i>Auto-sends when navigated to.</i></li>
+        </ul>
+    </li>
+    <li>
+        <b>Direct Enviroment sample</b>
+        <ul>
+            <li>As per <b><i>Send Data</i></b> bur comes with preconfigured Environemnet (Temerature, Humidity and Pressure) data. <i>Auto-sends when navigated to.</i></li>
+        </ul>
+    </li>
+    <li>
+        <b>Fetch Posted Data</b>
+        <ul>
+            <li>Displays the Telemetry data that has been sent to IoT from a local log of messages sent from here. <i>Assumes the Sensor class structure of the data.</i></li>
+        </ul>
+    </li>
+    <li>
+        <b>D2C Data</b>
+        <ul>
+            <li>Queries the IoT Hub for actual received Telemetry <i>(using the SDK's D2C sample console app as a .Net5 library that forwards data over Http to teh server)</i> and displays it. <i>Note: DOES NOT assume that the data is the Sensor class as used elsewhere here.</i></li>
+        </ul>
+    </li>
+    <li>
+        <b>Direct Commands</b>
+        <ul>
+            <li>These commands are sent directly to an attached device <i>(if any)</i><br />The mechansim is that the comamnds are placed a queue which can be retrieved by a device over Http.</li>
+        </ul>
+    </li>
+    <li>
+        <b>D2C Data</b>
+        <ul>
+            <li>These commands are forwared to the IoT Hub.</li>
+            <li>The SDK Quickstarts Console sample InvokeCommands has been integrated in-app in the server as a library.</li>
+            <li>It auto runs and monitors the hub  for these comamnds <i>(using the SDK's SimulatedDeviceWithCommand console sample as a further in-app .Net5 library)</i><br />
+        which it forwards to an attached device <i>(if any)</i> using the <b>Direct Commands</b> mechanism.</li>
         </ul>
     </li>
 </ul>

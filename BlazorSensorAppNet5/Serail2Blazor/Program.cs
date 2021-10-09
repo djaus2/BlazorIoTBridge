@@ -37,6 +37,8 @@ namespace SerialBlazor
         static char ACK = '#';
         static string InitialMessage = "* Begin";
         static bool IsFirstSerialRead = true;
+        static string ReadCommandsUrl = "";
+        static string SensorUrl = "";
         static void Main(string[] args)
         {
             var builder = new ConfigurationBuilder()
@@ -54,6 +56,8 @@ namespace SerialBlazor
             InitialMessage = settings.InitialMessage;
             if (settings.ACK.Length > 0)
                 ACK = settings.ACK[0];
+            ReadCommandsUrl = (settings.ReadCommandsController).Replace("Controller", "");
+            SensorUrl = (settings.SensorController).Replace("Controller", "");
 
             Console.WriteLine("> \tHello IoT Nerd!");
             // Get a list of serial port names.
@@ -187,7 +191,7 @@ namespace SerialBlazor
                     client.BaseAddress = new Uri(_host);
                     //var response = await client.GetAsync("Sensor");
                     //cmd = await response.Content.ReadAsStringAsync();
-                    Command _command = await client.GetFromJsonAsync<Command>("Sensor", null);  //.GetJsonAsync<Command>("Sensor")
+                    Command _command = await client.GetFromJsonAsync<Command>(ReadCommandsUrl, null);  //.GetJsonAsync<Command>("Sensor")
                     cmd = JsonConvert.SerializeObject(_command);
                     string cd = _command.Action;
                     if (cd != null)
@@ -201,7 +205,7 @@ namespace SerialBlazor
                             {
                                 Monitor.Enter(_serialPort);
                                 _serialPort.WriteLine(cmd);
-                                if ((_command.Parameter != null) && (_command.Parameter != 0))
+                                if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
                                     Console.WriteLine("> \tCommand sent: {0} Parameter: {1}", _command.Action, _command.Parameter);
                                 else
                                     Console.WriteLine("> \tCommand sent: {0}  No parameter.", _command.Action);
@@ -317,6 +321,9 @@ namespace SerialBlazor
         public int ReadTimeout {get; set;}
         public string ACK { get; set; }
         public string InitialMessage { get; set; }
+
+        public string ReadCommandsController { get; set; }
+        public string SensorController { get; set; }
 
 
     }

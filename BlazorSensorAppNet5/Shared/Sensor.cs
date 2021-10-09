@@ -4,7 +4,6 @@ using System.Text;
 using System.Threading;
 using System.Text.Json.Serialization;
 using System.Globalization;
-using System.Threading;
 using System.Threading.Tasks;
 using BlazorSensorAppNet5.Shared;
 

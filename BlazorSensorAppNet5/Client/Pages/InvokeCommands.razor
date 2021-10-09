@@ -7,8 +7,10 @@
 
 <button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
 Command:&nbsp;<input type="text" @bind="@command"/><br />
-Command:&nbsp;<input type="text" @bind="@value"/> <br />
+Parameter:&nbsp;<input type="text" @bind="@value"/> <br />
 @((MarkupString)Response)
+<br />
+<b><i>Nb: &nbsp; Inspect the returned Commands Queue on "Direct Commands".</i></b>
 
 @code {
     private int currentCount = 0;
@@ -43,7 +45,7 @@ Command:&nbsp;<input type="text" @bind="@value"/> <br />
         if (response.IsSuccessStatusCode)
         {
             System.Diagnostics.Debug.WriteLine("Sent OK");
-            Response = $"Sent OkK<br/>{content}";
+            Response = $"Sent Ok<br/>{content}";
         }
         else
         {

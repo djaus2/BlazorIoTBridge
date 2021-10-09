@@ -56,6 +56,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 {
                     if (!SimulatedDevicewithCommands.Program.IsRunning)
                     {
+                        Commands2DeviceController.ResetQ(true);
                         Sensor.CommandCallback cb = TestCallBack;
 
                         cmds = commandNames.Split(',').ToList<string>();
@@ -70,7 +71,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                         return Ok("Device Comamnd device Listener started.");
                     }
                     else
-                        return BadRequest($"{cmd} : Device Command Listener already running.");
+                        return BadRequest($"{cmd.Action} : Device Command Listener already running.");
 
                 }
                 else if (cmd.Action.ToUpper() == "STOPLISTENING")
@@ -78,10 +79,12 @@ namespace BlazorSensorAppNet5.Server.Controllers
                     if (SimulatedDevicewithCommands.Program.IsRunning)
                     {
                         await SimulatedDevicewithCommands.Program.Stop();
-                        return Ok($"{cmd} : Device Command Listener was stopped.");
+                        if (Commands2DeviceController.Commands != null)
+                            Commands2DeviceController.Commands.Clear();
+                        return Ok($"{cmd.Action} : Device Command Listener was stopped.");
                     }
                     else
-                        return BadRequest($"{cmd} : Device Command Listener was not running.");
+                        return BadRequest($"{cmd.Action} : Device Command Listener was not running.");
                 }
                 else
                 {
@@ -89,17 +92,25 @@ namespace BlazorSensorAppNet5.Server.Controllers
                     // This goes up to the hub and comes back here to the Callback via the Listener
                     if ((!SimulatedDevicewithCommands.Program.IsRunning))
                     {
-                        return NotFound($"{ cmd} : Device Command Listener has not been started. Use \"StartListening\" command.");
+                        return NotFound($"{ cmd.Action} : Device Command Listener has not been started. Use \"StartListening\" command.");
                     }
                    else if (!cmds.Contains(cmd.Action))
-                        return NotFound($"{ cmd} : Listener not listening for that command.");
+                        return NotFound($"{ cmd.Action} : Listener not listening for that command.");
                     string command_string = this.appsettings.SERVICE_CONNECTION_STRING;
                     Task t3 = Task.Run(() => InvokeDeviceMethod.Program.Main(new string[] { command_string, cmd.Action, cmd.Parameter.ToString() }));
                     await t3;
-                    return Ok($"Device command {cmd} device issued.");
+                    return Ok($"Device command {cmd.Action} device issued.");
                 }
             }
-            return BadRequest($"{cmd} : Probably call to wrong controller. Try Commands2DeviceController");
+            return BadRequest($"{cmd.Action} : Probably call to wrong controller. Try Commands2DeviceController");
+        }
+
+        [HttpGet]
+        public IEnumerable<Command> Get()
+        {
+            if (Commands2DeviceController.Commands != null)
+                return Commands2DeviceController.Commands.ToArray();
+            else return new Command[0];
         }
     }
 }
