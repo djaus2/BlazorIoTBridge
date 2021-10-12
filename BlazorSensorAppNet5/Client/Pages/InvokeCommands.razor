@@ -37,7 +37,7 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />
         else
             cmd = new BlazorSensorAppNet5.Shared.Command { Action = command, Parameter = val };
         cmd.Invoke = true;
-        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("CommansdsDirectFromHub", cmd,null);
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("CommansdsDirectFromHub/PostCommands", cmd,null);
         command = "";
         value = "";
         cmd = null;

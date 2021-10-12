@@ -3,15 +3,27 @@
 @inject HttpClient client
 
 <h1>Commands</h1>
+<table>
+    <tr><td colspan="2"><button class="btn btn-primary" @onclick="StartReads">Send Command:</button></td></tr>
+     <tr><td>Type Command:&nbsp;</td><td><input type="text" @bind="@command"/></td></tr>
+     <tr><td>Or Select Command:&nbsp;</td>
+       <td>
+           @if(@RegCmdz!= null)
+{
+    <select @onchange="DoStuff">
+        @foreach (var template in RegCmdz)
+        {
+            <option value=@template>@template</option>
+        }
+    </select>
+}
+       </td></tr>
+      <tr><td>Parameter:&nbsp;</td><td><input type="text" @bind="@value"/></td></tr>
 
-<button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
-Command:&nbsp;<input type="text" @bind="@command"/><br />
-Parameter:&nbsp;<input type="text" @bind="@value"/>
-<br />
+        <tr><td colspan="2"><button class="btn btn-primary" @onclick="GetRegisteredCommands">Get Registered Commands for Device/button</button></td></tr>
+</table>
 
-@((MarkupString)Response)
-<br />
-<button class="btn btn-primary" @onclick="GetCommands">Get Commands to device in Q</button><br />
+<br />@((MarkupString)Response)
 
 @if (commands != null)
 {
@@ -49,10 +61,54 @@ Parameter:&nbsp;<input type="text" @bind="@value"/>
     string Response = "";
     List<Command> commands = null;
     int iNull = (int)BlazorSensorAppNet5.Shared.Sensor.iNull;
+    string RegisteredCommands;
+    List<string> RegCmdz = null;
+
+    System.Threading.Timer timer;
+
+    private  void SetClock(object stateInfo)
+	{
+        if (Response == "")
+        {
+            GetCommands().GetAwaiter();
+            StateHasChanged();
+        }
+	}
+ 
+    void startTimer(int secs)
+    {
+        timer = new System.Threading.Timer(SetClock, new System.Threading.AutoResetEvent(false), 0, secs*1000);
+    }
+
+    void stopTimer()
+    {
+        timer.Dispose();
+    }
+
+    protected override async Task OnAfterRenderAsync( bool first)
+    {
+        await base.OnAfterRenderAsync(first);
+        if (first)
+        {
+            
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        await GetRegisteredCommands();
+        Response = "";
+        startTimer(1);
+    }
+
+    async Task DoStuff(ChangeEventArgs e)
+    {
+        command = e.Value.ToString();
+        if (command != "Select")
+        {
+            await StartReads();
+        }
     }
 
     private async Task StartReads()
@@ -81,7 +137,7 @@ Parameter:&nbsp;<input type="text" @bind="@value"/>
             Response += $"<br/>{content}";
         }
         await GetCommands();
-       
+        Response = "";     
     }
 
     private async Task GetCommands()
@@ -92,6 +148,16 @@ Parameter:&nbsp;<input type="text" @bind="@value"/>
         else
             commands = null;
     }
+
+    private async Task GetRegisteredCommands()
+    {
+        BlazorSensorAppNet5.Shared.Command cmd = new BlazorSensorAppNet5.Shared.Command { Action = "LISTCOMMANDS" , Invoke = true};
+        var response = await client.PostAsJsonAsync<BlazorSensorAppNet5.Shared.Command>("CommansdsDirectFromHub", cmd,null);
+        RegisteredCommands = await response.Content.ReadAsStringAsync();
+        RegisteredCommands = "Select," + RegisteredCommands;
+        RegCmdz = RegisteredCommands.Split(',').ToList<string>();
+    }
+
 
 
 }

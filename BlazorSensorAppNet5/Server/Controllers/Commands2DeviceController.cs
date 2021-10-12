@@ -113,6 +113,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 return BadRequest($"{cmd.Action} : Probably call to wrong controller. Try CommansdsDirectFromHubController.");
         }
 
+
         [HttpGet]
         public IActionResult Get()
         {

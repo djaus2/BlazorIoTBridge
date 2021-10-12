@@ -12,6 +12,7 @@
 }
 else
 {
+    <p>Last 10 in reverse order shown ...</p>
     <button class="btn btn-secondary" @onclick="Clear">Clear</button><br>
     <button class="btn btn-secondary" @onclick="Refresh">Refresh</button><br>
     <table class="t1">
@@ -36,7 +37,7 @@ else
                     <td>@sensor.No</td>
                     <td>@sensor.SensorType</td>
                     <td>@sensor.DateTime</td>
-                    @if (sensor.Value != Sensor.iNull)
+                    @if (sensor.Value != (double)Sensor.iNull)
                     {
                         <td>@sensor.Value</td>
                     }
@@ -44,9 +45,13 @@ else
                     {
                         <td>&nbsp;</td>
                     }
-                    <td>@sensor.State</td>
+                    @if (@sensor.SensorType == SensorType.sswitch)
+                    {
+                        <td>@sensor.State</td>
+                    }
                     @if (sensor.Values != null)
                     {
+                        <td>&nbsp;</td>
                         @if (@sensor.Values.Count() > 2)
                         {
                             <td>@sensor.Values[0]</td>
@@ -64,8 +69,6 @@ else
                         <td>...</td>
                         <td>Temperature</td>
                         <td>@sensor.environ.Temperature</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
                     </tr>
                      <tr>
                         <td>&nbsp;</td>
@@ -73,8 +76,7 @@ else
                         <td>...</td>
                         <td>Hunidity</td>
                         <td>@sensor.environ.Humidity</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
+
                     </tr>
                     <tr>
                         <td>&nbsp;</td>
@@ -82,8 +84,6 @@ else
                         <td>...</td>
                         <td>Pressure</td>
                         <td>@sensor.environ.Pressure</td>
-                        <td>&nbsp;</td>
-                        <td>&nbsp;</td>
                     </tr>
                 }
         }
@@ -93,11 +93,34 @@ else
 
 @code {
     private List<Sensor> sensors;
+    string Response = "";
+
+        System.Threading.Timer timer;
+
+    private  void SetClock(object stateInfo)
+	{
+        if (Response == "")
+        {
+            Refresh().GetAwaiter();
+            StateHasChanged();
+        }
+	}
+ 
+    void startTimer(int secs)
+    {
+        timer = new System.Threading.Timer(SetClock, new System.Threading.AutoResetEvent(false), 0, secs*1000);
+    }
+
+    void stopTimer()
+    {
+        timer.Dispose();
+    }
   
 
     protected override async Task OnInitializedAsync()
     {
         await Refresh();
+        startTimer(1);
     }
 
      private async Task Clear()
@@ -111,10 +134,14 @@ else
 
     private async Task Refresh()
     {
-        string Result = "Busy";
+        Response = "Busy";
         var data = await Http.GetFromJsonAsync<Sensor[]>("PostedTelemetryLog");
-        sensors = new List<Sensor> ( data );
+        var sensors1 = new List<Sensor> ( data );
+        sensors = (from s in sensors1
+                   orderby s.DateTime descending
+                   select s).Take(10).ToList();
         StateHasChanged();
+        Response = "";
     }
 
 

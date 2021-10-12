@@ -1,6 +1,7 @@
 ﻿using BlazorSensorAppNet5.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,12 +26,14 @@ namespace BlazorSensorAppNet5.Server.Controllers
     public class CommansdsDirectFromHubController : ControllerBase
     {
 
-
+        private static Dictionary<string, Sensor.CommandCallback> Callbacks = null;
         private readonly AppSettings appsettings;
 
         public CommansdsDirectFromHubController(AppSettings _appsettings)
         {
             this.appsettings = _appsettings;
+            if (Callbacks == null)
+                Callbacks = new Dictionary<string, Sensor.CommandCallback>();
         }
 
         public async Task TestCallBack(string cmd, int param)
@@ -43,15 +46,28 @@ namespace BlazorSensorAppNet5.Server.Controllers
         }
 
 
-        private static string commandNames = "Rate,Start,Stop,Pause,Read";
+        private static string commandNames = "GETCOMMANDS";
         private static List<string> cmds;
         [HttpPost]
-        public async Task<IActionResult> Post(Command obj)
+        public async Task<IActionResult> Post(Object obj)
         {
-            Command cmd = obj;
+           
+            string json = obj.ToString();
+            if (json[0] == '[')
+            {
+                List<string> cmdNames = JsonConvert.DeserializeObject<List<string>>(json);
+                return await AddCommands(cmdNames);
+            }
+
+            Command cmd = JsonConvert.DeserializeObject<Command>(json);
+
 
             if (cmd.Invoke == true)
             {
+                if (cmd.Action.ToUpper() == "LISTCOMMANDS")
+                {
+                        return Ok($"{commandNames}");
+                }
                 if (cmd.Action.ToUpper() == "STARTLISTENING")
                 {
                     if (!SimulatedDevicewithCommands.Program.IsRunning)
@@ -64,6 +80,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                         foreach (var name in cmds)
                         {
                             callbacks.Add(name, cb);
+                            Callbacks.Add(name, cb);
                         }
                         string names = String.Join(",", commandNames.ToArray());
                         string connect_stringDev = this.appsettings.IOTHUB_DEVICE_CONN_STRING;
@@ -81,6 +98,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                         await SimulatedDevicewithCommands.Program.Stop();
                         if (Commands2DeviceController.Commands != null)
                             Commands2DeviceController.Commands.Clear();
+                        Callbacks = new Dictionary<string, Sensor.CommandCallback>();
                         return Ok($"{cmd.Action} : Device Command Listener was stopped.");
                     }
                     else
@@ -111,6 +129,41 @@ namespace BlazorSensorAppNet5.Server.Controllers
             if (Commands2DeviceController.Commands != null)
                 return Commands2DeviceController.Commands.ToArray();
             else return new Command[0];
+        }
+
+
+
+        public async Task<IActionResult> AddCommands(List<string> cmds)
+        {
+            if (!string.IsNullOrEmpty(commandNames.Trim()))
+            {
+                string addedCommands = "";
+                Dictionary<string, Sensor.CommandCallback> callbacks = new Dictionary<string, Sensor.CommandCallback>();
+                Sensor.CommandCallback cb = TestCallBack;
+                foreach (var name in cmds)
+                {
+                    if ((!Callbacks.ContainsKey(name)) && (!Callbacks.ContainsKey(name.ToUpper())) && (!Callbacks.ContainsKey(name.ToLower())))
+                    {
+                        if (addedCommands == "")
+                            addedCommands = name;
+                        else
+                            addedCommands += $",{name}";
+                        Callbacks.Add(name, cb);
+                        callbacks.Add(name, cb);
+                    }
+                }
+                if (addedCommands != "")
+                {
+                    string connect_stringDev = this.appsettings.IOTHUB_DEVICE_CONN_STRING;
+                    await SimulatedDevicewithCommands.Program.Main(new string[] { connect_stringDev, addedCommands }, callbacks);
+                    commandNames += "," + addedCommands;
+                    return Ok($"Device Comamnd device Listener added commands {addedCommands}.");
+                }
+                else
+                    return Ok($"No new commands added to Device Comamnd device Listener from {commandNames}.");
+            }
+            else
+                return BadRequest($"Add commnds : No commands in csv");
         }
     }
 }

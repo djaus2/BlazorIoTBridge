@@ -42,7 +42,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
         /// Sends a single message.
         /// Called by SensorController-Post
         /// </summary>
-        public async Task StartSendDeviceToCloudMessageAsync(Sensor Sensor)
+        public async Task<bool> StartSendDeviceToCloudMessageAsync(Sensor Sensor)
         {
             System.Diagnostics.Debug.WriteLine("===== SendDeviceToCloudMessageAsync In =====");
             var messageString = JsonConvert.SerializeObject(Sensor);
@@ -58,9 +58,11 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 System.Diagnostics.Debug.WriteLine("{0} > Sending message: {1}", DateTime.Now, messageString);
                 await s_deviceClient.SendEventAsync(message);
                 System.Diagnostics.Debug.WriteLine("{0} > Sent message (OK?): {1}", DateTime.Now, messageString);
+                return true;
             } catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("{0} > Sent message (Error): {1}", ex.Message);
+                return false;
             }
         }
 

@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 using System.Globalization;
 using System.Threading.Tasks;
 using BlazorSensorAppNet5.Shared;
+using System.Collections;
+using System.Linq;
 
 namespace BlazorSensorAppNet5.Shared
 {
@@ -41,12 +43,42 @@ namespace BlazorSensorAppNet5.Shared
             get
             {
                 var dt = new DateTime(TimeStamp);
-                return String.Format("{0:d/MM/yyyy 	h:mm tt}", dt);
+                return String.Format("{0:d/MM/yyyy 	h:mm:ss tt}", dt);
             }
         }
 
 
     }
+
+    public class DeviceCommands
+    {
+        public string Id { get; set; }
+        public List<string> Commands { get; set; }
+
+        public static IList<string> GetFromObject(object v)
+        {
+            IList<string> dc;
+            if (!TryCastAsList<string>(v, out dc))
+                return null;
+            return dc;
+        }
+        static bool TryCastAsList<T>(object input, out IList<T> output)
+        {
+
+            IEnumerable inputAsIEnumerable = input as IEnumerable;
+            if (inputAsIEnumerable != null)
+            {
+                output = inputAsIEnumerable.Cast<T>().ToList();
+                return true;
+            }
+            else
+            {
+                output = null;
+                return false;
+            }
+        }
+    }
+
 
     //public class AppSettings
     //{

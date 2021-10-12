@@ -36,6 +36,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
 
             if (_SimulatedDeviceCS == null)
             {
+                Status = 1;
                 _SimulatedDeviceCS = new SimulatedDeviceCS(appsettings.IOTHUB_DEVICE_CONN_STRING);
             }
         }
@@ -45,7 +46,35 @@ namespace BlazorSensorAppNet5.Server.Controllers
             _SimulatedDeviceCS = null;
         }
 
-        private static string block = "BLOCK";
+        static int status { get; set; }
+
+        private static object meltdownLock = new object();
+        private static bool _meltdownIsHappening;
+        public static int Status
+        {
+            get
+            {
+                int stat;
+                Monitor.Enter(meltdownLock);
+                stat = status;
+                Monitor.Exit(meltdownLock);
+                return stat;
+            }
+            set
+            {
+                Monitor.Enter(meltdownLock);
+                status = value;
+                Monitor.Exit(meltdownLock);
+            }
+        }
+
+        [HttpGet]
+        public IActionResult Get()
+        {
+            int status;
+            status = Status;
+            return Ok(status);
+        }
 
 
 
@@ -81,7 +110,14 @@ namespace BlazorSensorAppNet5.Server.Controllers
                     //{
                     //    if (!SimulatedDevice.KeepRunning)
                     //        await SimulatedDevice.StartMessageSending();
-                    await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //
+                    while (status == 0) ;
+                    Status = 0;
+                    bool res = await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //
+                    if (res)
+                        Status = 1;
+                    else
+                        Status = -1;
+
 
                     if (PostedTelemetryLogController.PostLog == null)
                     {
@@ -98,7 +134,8 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 }
                 catch (Exception)
                 {
-                    return BadRequest(Count);
+                    Status = -2;
+                    return BadRequest(Status);
                 }
             }
         }
