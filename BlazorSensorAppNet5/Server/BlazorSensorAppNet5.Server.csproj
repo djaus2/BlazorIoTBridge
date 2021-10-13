@@ -26,10 +26,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Quickstarts\InvokeDeviceMethodBlaz\InvokeDeviceMethod_lib.csproj" />
+    <ProjectReference Include="..\..\Quickstarts\SimulatedDeviceWithCommandOnlyBlaz\SimulatedDeviceWithCommandOnlyBlaz_lib.csproj" />
     <ProjectReference Include="..\Client\BlazorSensorAppNet5.Client.csproj" />
     <ProjectReference Include="..\Shared\BlazorSensorAppNet5.Shared.csproj" />
-    <ProjectReference Include="M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\InvokeDeviceMethodBlaz\InvokeDeviceMethod.csproj" />
-    <ProjectReference Include="M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\SimulatedDeviceWithCommandOnlyBlaz\SimulatedDeviceWithCommandOnlyBlaz.csproj" />
   </ItemGroup>
 
   <ItemGroup>

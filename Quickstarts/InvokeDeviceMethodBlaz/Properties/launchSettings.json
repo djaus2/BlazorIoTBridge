@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "InvokeDeviceMethod": {
+      "commandName": "Project",
+      "commandLineArgs": "SetTelemetryInterval  5"
+    }
+  }
+}

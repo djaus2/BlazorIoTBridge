@@ -9,17 +9,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorSensorAppNet5.Client"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorSensorAppNet5.Shared", "BlazorSensorAppNet5\Shared\BlazorSensorAppNet5.Shared.csproj", "{59F7DAF6-4B39-4535-B125-7BC22F9D6D06}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SerialBlazor", "BlazorSensorAppNet5\Serail2Blazor\SerialBlazor.csproj", "{FD291519-8770-4389-875F-151873BA2450}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SerialBlazor_app", "BlazorSensorAppNet5\Serail2Blazor\SerialBlazor_app.csproj", "{FD291519-8770-4389-875F-151873BA2450}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReadD2cMessagesBlaz", "M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\ReadD2cMessagesBlaz\ReadD2cMessagesBlaz.csproj", "{BA348857-627A-4D0D-8F00-2454069AE704}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReadD2cMessagesBlaz_app", "M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\ReadD2cMessagesBlaz\ReadD2cMessagesBlaz_app.csproj", "{BA348857-627A-4D0D-8F00-2454069AE704}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorSensorAppNet5.SharedDNC", "BlazorSensorAppNet5\Shared -DNC\BlazorSensorAppNet5.SharedDNC.csproj", "{986696EA-888C-4895-9167-AB02DDDEB433}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReadD2cMessages.Shared_DNC", "BlazorSensorAppNet5\Shared -DNC\ReadD2cMessages.Shared_DNC.csproj", "{986696EA-888C-4895-9167-AB02DDDEB433}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimulatedDeviceWithCommandBlaz", "M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\SimulatedDeviceWithCommandBlaz\SimulatedDeviceWithCommandBlaz.csproj", "{F81DB17D-DB33-45B7-90BF-A1492CC20969}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InvokeDeviceMethod_lib", "Quickstarts\InvokeDeviceMethodBlaz\InvokeDeviceMethod_lib.csproj", "{3A007C3C-BC2D-43DA-ADC2-D2D6ED4BAAF3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InvokeDeviceMethod", "M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\InvokeDeviceMethodBlaz\InvokeDeviceMethod.csproj", "{99C9C0BB-D135-4459-91C8-C7C231E3B251}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimulatedDeviceWithCommandOnlyBlaz", "M:\Users\DavidJones\source\repos\AzureIoToolboxwithBlazor\Quickstarts\SimulatedDeviceWithCommandOnlyBlaz\SimulatedDeviceWithCommandOnlyBlaz.csproj", "{A7638474-2977-4DF5-8463-AF141C4ECDC2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimulatedDeviceWithCommandOnlyBlaz_lib", "Quickstarts\SimulatedDeviceWithCommandOnlyBlaz\SimulatedDeviceWithCommandOnlyBlaz_lib.csproj", "{D89BBD35-1AC5-4C54-8BD3-0DD9C1DEE749}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,18 +49,14 @@ Global
 		{986696EA-888C-4895-9167-AB02DDDEB433}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{986696EA-888C-4895-9167-AB02DDDEB433}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{986696EA-888C-4895-9167-AB02DDDEB433}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F81DB17D-DB33-45B7-90BF-A1492CC20969}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F81DB17D-DB33-45B7-90BF-A1492CC20969}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F81DB17D-DB33-45B7-90BF-A1492CC20969}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F81DB17D-DB33-45B7-90BF-A1492CC20969}.Release|Any CPU.Build.0 = Release|Any CPU
-		{99C9C0BB-D135-4459-91C8-C7C231E3B251}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{99C9C0BB-D135-4459-91C8-C7C231E3B251}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{99C9C0BB-D135-4459-91C8-C7C231E3B251}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{99C9C0BB-D135-4459-91C8-C7C231E3B251}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A7638474-2977-4DF5-8463-AF141C4ECDC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A7638474-2977-4DF5-8463-AF141C4ECDC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A7638474-2977-4DF5-8463-AF141C4ECDC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A7638474-2977-4DF5-8463-AF141C4ECDC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A007C3C-BC2D-43DA-ADC2-D2D6ED4BAAF3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A007C3C-BC2D-43DA-ADC2-D2D6ED4BAAF3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A007C3C-BC2D-43DA-ADC2-D2D6ED4BAAF3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A007C3C-BC2D-43DA-ADC2-D2D6ED4BAAF3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D89BBD35-1AC5-4C54-8BD3-0DD9C1DEE749}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D89BBD35-1AC5-4C54-8BD3-0DD9C1DEE749}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D89BBD35-1AC5-4C54-8BD3-0DD9C1DEE749}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D89BBD35-1AC5-4C54-8BD3-0DD9C1DEE749}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

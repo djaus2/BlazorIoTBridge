@@ -338,7 +338,7 @@ namespace SerialBlazor
                                 break;
                             case "-1":
                                 keepTrying = false;
-                                Console.WriteLine("There was a a problem with the transmission");
+                                Console.WriteLine("There was a a problem with the transmission.");
                                 break;
                             case "-2":
                                 keepTrying = false;

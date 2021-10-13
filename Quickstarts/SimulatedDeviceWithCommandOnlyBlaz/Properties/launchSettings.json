@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SimulatedDeviceWithCommandOnlyBlaz": {
+      "commandName": "Project",
+      "commandLineArgs": "\"\" Rate,Stop,Start"
+    }
+  }
+}
