@@ -7,8 +7,9 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using BlazorSensorApp.Shared;
+using BlazorSensorAppNet5.Shared;
 using Microsoft.Extensions.Configuration;
+using System.Net.Http.Json;
 
 namespace ConsoleApp1
 {
@@ -30,7 +31,8 @@ namespace ConsoleApp1
             var mySettingsConfig = new AppSettings();
             configuration.GetSection("AppSettings").Bind(mySettingsConfig);
 
-            string url = $"{ mySettingsConfig.Url}/{ mySettingsConfig.Api}";
+            string host = mySettingsConfig.Url;
+            string api = mySettingsConfig.Api; ;
 
             int numToSend = mySettingsConfig.NumToSend;
             Console.WriteLine("Sending {0} messages", numToSend);
@@ -39,15 +41,15 @@ namespace ConsoleApp1
             Task[] myTasks = new Task[numToSend];
             for (int i=0;i<myTasks.Length;i+=3)
             {
-                myTasks[i]= Send(i,url, SensorType.temperature, 67.8, null);
+                myTasks[i]= Send(i,host,api, SensorType.temperature, 67.8, null);
                 await Task.Delay(333);
                 if ((i + 1) < myTasks.Length)
                 {
-                    myTasks[i + 1] = Send(i + 1, url, SensorType.humidity, 34.78, null);
+                    myTasks[i + 1] = Send(i + 1, host,api, SensorType.humidity, 34.78, null);
                     await Task.Delay(333);
                     if ((i + 2) < myTasks.Length)
                     {
-                        myTasks[i + 2] = Send(i + 2, url, SensorType.pressure, 10001.2, null);
+                        myTasks[i + 2] = Send(i + 2, host,api, SensorType.pressure, 10001.2, null);
                         await Task.Delay(333);
                     }
                 }
@@ -60,32 +62,64 @@ namespace ConsoleApp1
         }
 
         static int count = 0;
-        static async Task Send(int No,string url, SensorType sensorType, Double value, List<Double> values)
+        static async Task Send(int No,string host, string api, SensorType sensorType, Double? value, List<Double> values, bool state=false)
         {
             try
             {
-                System.Net.Http.HttpClient httpClient = new HttpClient();
+                using System.Net.Http.HttpClient httpClient = new HttpClient();
+                httpClient.BaseAddress = new Uri(host);
+
                 Guid guid = Guid.NewGuid();
                 long TimeStamp = DateTime.Now.Ticks;
-                Sensor _Sensor = new Sensor();
-                _Sensor.No = No;
-                _Sensor.Id = guid.ToString();
-                _Sensor.SensorType = sensorType;
-                _Sensor.TimeStamp = TimeStamp;
-                _Sensor.Value = value;
-                _Sensor.Values = values;
+                Sensor sensor = new Sensor();
+                sensor.No = No;
+                sensor.Id = guid.ToString();
+                sensor.SensorType = sensorType;
+                sensor.TimeStamp = TimeStamp;
+                if (value != null)
+                    sensor.Value = value;
+                else
+                    sensor.Value = (double)Sensor.iNull;
+                sensor.Values = values;
+                sensor.State = state;
 
-                Console.WriteLine(_Sensor.SensorType);
+                Console.Write("Sending ...");
 
-                var dataAsString = JsonConvert.SerializeObject(_Sensor);
-                var content = new StringContent(dataAsString);
-                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-                var resultPost = await httpClient.PostAsync(url, content);
-
-                Console.WriteLine(resultPost.StatusCode.ToString());
-                var sr = await resultPost.Content.ReadAsStringAsync();
-                Console.WriteLine(sr);
+                var response = await httpClient.PostAsJsonAsync<Sensor>(api, sensor);
+                Console.Write(" Sent: ");
+                if (response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine("Sent OK");
+                    bool keepTrying = true;
+                    while (keepTrying)
+                    {
+                        var responseGet = await httpClient.GetAsync("Sensor");
+                        string resp = await responseGet.Content.ReadAsStringAsync();
+                        switch (resp)
+                        {
+                            case "0":
+                                Console.WriteLine("Trying");
+                                break;
+                            case "1":
+                                Console.WriteLine("Done");
+                                keepTrying = false;
+                                break;
+                            case "-1":
+                                keepTrying = false;
+                                Console.WriteLine("There was a a problem with the transmission.");
+                                break;
+                            case "-2":
+                                keepTrying = false;
+                                Console.WriteLine("There was a service error.");
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+                };
             }
             catch (Exception ex)
             {

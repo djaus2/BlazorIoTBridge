@@ -40,7 +40,7 @@ namespace SerialBlazor
         static string InitialMessage = "* Begin";
         static bool IsFirstSerialRead = true;
         static string ReadCommandsUrl = "";
-        static string SensorUrl = "";
+        static string SensorApi = "sensor";
         static void Main(string[] args)
         {
             var builder = new ConfigurationBuilder()
@@ -59,7 +59,7 @@ namespace SerialBlazor
             if (settings.ACK.Length > 0)
                 ACK ="{\"Action\":\"" + settings.ACK + "\"}";
             ReadCommandsUrl = (settings.ReadCommandsController).Replace("Controller", "");
-            SensorUrl = (settings.SensorController).Replace("Controller", "");
+            SensorApi = (settings.SensorController).Replace("Controller", "");;
 
             Console.WriteLine("> \tHello IoT Nerd!");
             // Get a list of serial port names.
@@ -302,22 +302,16 @@ namespace SerialBlazor
         public static async Task SendSensor(string sensorJson)
         {
             Sensor sensor = JsonConvert.DeserializeObject<Sensor>(sensorJson);
-            using var client = new System.Net.Http.HttpClient();
 
-            var dataAsString = JsonConvert.SerializeObject(sensor);
-            var content = new StringContent(dataAsString);
+
             try
             {
-                client.BaseAddress = new Uri(_host);
+                using var httpClient = new System.Net.Http.HttpClient();
+                httpClient.BaseAddress = new Uri(_host);
                 // Note no "api/Sensor" but just "Sensor" in next LOC!:
                 Console.Write("Sending ... ");
-                //for (int i = 0; i < 1000; i++)
-                //{ //Speed test
-                //    sensor.Id = i.ToString();
-                //    var response1 = await client.PostAsJsonAsync<Sensor>("Sensor", sensor, null);
-                //    Console.WriteLine(i);
-                //}
-                var response = await client.PostAsJsonAsync<Sensor>("Sensor", sensor, null);
+
+                var response = await httpClient.PostAsJsonAsync<Sensor>(SensorApi, sensor, null);
                 Console.Write(" Sent: ");
                 if (response.IsSuccessStatusCode)
                 {
@@ -325,7 +319,7 @@ namespace SerialBlazor
                     bool keepTrying = true;
                     while (keepTrying)
                     {
-                        var responseGet = await client.GetAsync("Sensor");
+                        var responseGet = await httpClient.GetAsync(SensorApi);
                         string resp = await responseGet.Content.ReadAsStringAsync();
                         switch (resp)
                         {
@@ -393,19 +387,20 @@ namespace SerialBlazor
     }
     public class Settings
     {
-        public bool Auto {get; set;}
+        public bool Auto { get; set; }
         public string ComPort { get; set; }
         public int BaudRate { get; set; }
         public int Delay_Secs { get; set; }
         public string Host { get; set; }
         public uint Port { get; set; }
         public int WriteTimeout { get; set; }
-        public int ReadTimeout {get; set;}
+        public int ReadTimeout { get; set; }
         public string ACK { get; set; }
         public string InitialMessage { get; set; }
 
         public string ReadCommandsController { get; set; }
         public string SensorController { get; set; }
+
 
 
     }
