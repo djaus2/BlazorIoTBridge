@@ -18,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using System.IO;
 using System.Collections.Generic;
 using Newtonsoft.Json.Converters;
+using System.Reflection;
 // NuGet packages:
 // Microsoft.Extensions.Configuration.Binder
 // Microsoft.Extensions.Configuration.Jso
@@ -27,6 +28,8 @@ namespace SerialBlazor
     class Program
     {
         static IConfigurationRoot configuration { get; set; }
+        //public static int Timeout1 { get => Timeout2; set => Timeout2 = value; }
+        //public static int Timeout2 { get => Timeout; set => Timeout = value; }
 
         static SerialPort _serialPort;
 
@@ -41,6 +44,9 @@ namespace SerialBlazor
         static bool IsFirstSerialRead = true;
         static string ReadCommandsUrl = "";
         static string SensorApi = "sensor";
+        static bool IsDevice = false;
+        static string CommandsIfIsDevice = "GETCOMANDS,RATE";
+        static int defaultTimeout = 5000;
         static void Main(string[] args)
         {
             var builder = new ConfigurationBuilder()
@@ -57,15 +63,18 @@ namespace SerialBlazor
             auto = settings.Auto;
             InitialMessage = settings.InitialMessage;
             if (settings.ACK.Length > 0)
-                ACK ="{\"Action\":\"" + settings.ACK + "\"}";
+                ACK = "{\"Action\":\"" + settings.ACK + "\"}";
             ReadCommandsUrl = (settings.ReadCommandsController).Replace("Controller", "");
-            SensorApi = (settings.SensorController).Replace("Controller", "");;
+            SensorApi = (settings.SensorController).Replace("Controller", "");
+            IsDevice = settings.IsDevice;
+            CommandsIfIsDevice = settings.CommandsIfIsDevice;
+            defaultTimeout = settings.defaultTimeout;
 
             Console.WriteLine("> \tHello IoT Nerd!");
             // Get a list of serial port names.
             string[] ports = SerialPort.GetPortNames();
             var lst = new List<string>(ports);
-            if ((!auto) || (!lst.Contains(comport)))
+            if (((!auto) || (!lst.Contains(comport))) && (!IsDevice))
             {
                 if (!lst.Contains(comport))
                     comport = "";
@@ -119,8 +128,11 @@ namespace SerialBlazor
             }
             else
             {
-                Console.WriteLine("> \tRemovce and reinsert the USB cable NOW ... then ...");
-                Console.WriteLine("> \tNb: It needs to be in at start.");
+                if (IsDevice)
+                {
+                    Console.WriteLine("> \tRemovce and reinsert the USB cable NOW ... then ...");
+                    Console.WriteLine("> \tNb: It needs to be in at start.");
+                }
             }
 
             if (_host[_host.Length - 1] != '/')
@@ -130,26 +142,38 @@ namespace SerialBlazor
 
             Console.Write("> \tPress [Enter] when web app is ready.");
             Console.ReadLine();
-            _serialPort = new SerialPort(comport, baudrate);
-            // Set the read/write timeouts
-            _serialPort.ReadTimeout = settings.ReadTimeout;
-            _serialPort.WriteTimeout = settings.WriteTimeout;
-            while (!_serialPort.IsOpen)
+            if (!IsDevice)
             {
-                try
+                _serialPort = new SerialPort(comport, baudrate);
+                // Set the read/write timeouts
+                _serialPort.ReadTimeout = settings.ReadTimeout;
+                _serialPort.WriteTimeout = settings.WriteTimeout;
+                while (!_serialPort.IsOpen)
                 {
-                    _serialPort.Open();
-                }
-                catch (Exception)
-                {
-                    Console.WriteLine("> \tSerial Port {0} didn't open. Please check..", comport);
-                    Thread.Sleep(1000);
+                    try
+                    {
+                        _serialPort.Open();
+                    }
+                    catch (Exception)
+                    {
+                        Console.WriteLine("> \tSerial Port {0} didn't open. Please check..", comport);
+                        Thread.Sleep(1000);
+                    }
                 }
             }
 
-            if (_serialPort.IsOpen)
+            bool ready = true;
+            if (!IsDevice)
             {
-                Console.WriteLine("> \tOpened the Serial Port {0}.", comport);
+                ready = _serialPort.IsOpen;
+            }
+
+            if (ready)
+            {
+                if (!IsDevice)
+                    Console.WriteLine("> \tOpened the Serial Port {0}.", comport);
+                else
+                    Console.WriteLine("> \tRunning app as device simulator.");
                 //if (_serialPort.BytesToRead != 0)
                 //    _serialPort.DiscardInBuffer();
 
@@ -160,14 +184,27 @@ namespace SerialBlazor
                 Console.WriteLine("> \thttps:////docs.microsoft.com//en-us//azure//iot-fundamentals//howto-use-iot-explorer");
                 Console.WriteLine();
                 bool cont = true;
-                IsFirstSerialRead = true;
-                _serialPort.WriteLine("RESET");
+                if (!IsDevice)
+                {
+                    IsFirstSerialRead = true;
+                    _serialPort.WriteLine("RESET");
+                }
                 while (cont)
                 {
-                    Task t3 = Task.Run(() => Signal());
-                    Task t4 = Task.Run(() => Read());
-                    t3.Wait();
-                    t4.Wait();
+                    if (!IsDevice)
+                    {
+                        Task t3 = Task.Run(() => Signal());
+                        Task t4 = Task.Run(() => Read());
+                        t3.Wait();
+                        t4.Wait();
+                    }
+                    else
+                    {
+                        Task t5 = Task.Run(() => Signal());
+                        Task t6 = Task.Run(() => SimSensor());
+                        t5.Wait();
+                        t6.Wait();
+                    }
                 }
                 _serialPort.Close();
             }
@@ -177,13 +214,13 @@ namespace SerialBlazor
 
         public static async Task Signal()
         {
-            while (IsFirstSerialRead)
+            while ((IsFirstSerialRead) && (!IsDevice))
             {
                 Thread.Sleep(1000);
             }
             while (true)
             {
-                if (isFirstRead)
+                if ((isFirstRead) && (!IsDevice))
                 {
                     isFirstRead = false;
                     if (auto)
@@ -200,6 +237,11 @@ namespace SerialBlazor
                     //var response = await client.GetAsync("Sensor");
                     //cmd = await response.Content.ReadAsStringAsync();
                     Command _command = await client.GetFromJsonAsync<Command>(ReadCommandsUrl, null);  //.GetJsonAsync<Command>("Sensor")
+                    if (IsDevice && isFirstRead)
+                    {
+                        isFirstRead = false;
+                        await SendCommands($"{CommandsIfIsDevice}");
+                    }
                     cmd = JsonConvert.SerializeObject(_command);
                     string cd = _command.Action;
                     if (cd != null)
@@ -211,13 +253,41 @@ namespace SerialBlazor
                             cd = cd.Trim();
                             if (cd != "")
                             {
-                                Monitor.Enter(_serialPort);
-                                _serialPort.WriteLine(cmd);
-                                if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
-                                    Console.WriteLine("> \tCommand sent: {0} Parameter: {1}", _command.Action, _command.Parameter);
+                                if (!IsDevice)
+                                {
+                                    //Forward serially
+                                    Monitor.Enter(_serialPort);
+                                    _serialPort.WriteLine(cmd);
+                                    if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
+                                        Console.WriteLine("> \tCommand sent: {0} Parameter: {1}", _command.Action, _command.Parameter);
+                                    else
+                                        Console.WriteLine("> \tCommand sent: {0}  No parameter.", _command.Action);
+                                    Monitor.Exit(_serialPort);
+                                }
                                 else
-                                    Console.WriteLine("> \tCommand sent: {0}  No parameter.", _command.Action);
-                                Monitor.Exit(_serialPort);
+                                {
+                                    string[] cmds = CommandsIfIsDevice.Split(',');
+                                    if ((new List<string>(cmds)).Contains(_command.Action))
+                                    {
+                                        if ((_command.Parameter != null) && (_command.Parameter != Sensor.iNull))
+                                        {
+                                            InvokeMethod imv = new InvokeMethod();
+                                            imv.Invoke(_command.Action, _command.Parameter);
+                                            Console.WriteLine($"Got command {_command.Action} with parameter {_command.Parameter}");
+                                        }
+                                        else
+                                        {
+                                            InvokeMethod imv = new InvokeMethod();
+                                            imv.Invoke(_command.Action, null);
+                                            Console.WriteLine($"Got command {_command.Action}");
+                                        }
+                                    }
+                                   else
+                                    {
+                                        Console.WriteLine($"Got unrecognised command {_command.Action}");
+
+                                    }
+                                }
                             }
                         }
                     }
@@ -233,7 +303,172 @@ namespace SerialBlazor
 
         }
 
+        public class InvokeMethod
+        {
+            public void Invoke(string name, int? parameter)
+            {
+                Type thisType = this.GetType();
+                MethodInfo theMethod = thisType.GetMethod(name);
+                if (parameter != null)
+                    theMethod.Invoke(this, new object[] { parameter });
+                else
+                    theMethod.Invoke(this, null);
+            }
 
+            public void Invoke(string name)
+            {
+                Type thisType = this.GetType();
+                MethodInfo theMethod = thisType.GetMethod(name);
+                theMethod.Invoke(this, null);
+            }
+
+            public void RATE(int param)
+            {
+                if (param != Sensor.iNull)
+                    Timeout = (int)param;
+            }
+
+            public void START()
+            {
+                IsRunning = true;
+                Timeout = defaultTimeout;
+            }
+
+            public void STOP()
+            {
+                IsRunning = false;
+            }
+
+            public void FAST()
+            {
+                Timeout /= 2;
+                if (Timeout < 1000)
+                    Timeout = 1000;
+            }
+
+            public void SLOW()
+            {
+                Timeout *= 2;
+                if (Timeout > 10000)
+                    Timeout = 10000;
+            }
+            public void PAUSE()
+            {
+                IsRunning = false;
+
+            }
+        }
+            
+        static string MonitorTimeout = "MonitorTimeout";
+        static int _Timeout = 5000;
+        static int Timeout
+        {
+            get {
+                int val;
+                Monitor.Enter(MonitorTimeout);
+                val = _Timeout;
+                Monitor.Exit(MonitorTimeout);
+                return val;
+            }
+            set {
+                Monitor.Enter(MonitorTimeout);
+                _Timeout= value;
+                Monitor.Exit(MonitorTimeout);
+            }
+        }
+
+        static string MonitorIsRunning = "MonitorIsRunning";
+        static bool _IsRunning = true;
+        static bool  IsRunning
+        {
+            get
+            {
+                bool val;
+                Monitor.Enter(MonitorIsRunning);
+                val = _IsRunning;
+                Monitor.Exit(MonitorIsRunning);
+                return val;
+            }
+            set
+            {
+                Monitor.Enter(MonitorIsRunning);
+                _IsRunning = value;
+                Monitor.Exit(MonitorIsRunning);
+            }
+        }
+
+        public static async Task SimSensor()
+        {
+            Timeout = defaultTimeout;
+            Thread.Sleep(1000);
+
+            while (true)
+            {
+                Random rnd = new Random();
+                int sensorNo = 0;
+                long ts = DateTime.Now.Ticks;
+                while (IsRunning)
+                {
+                    try
+                    {
+                        Sensor sensor = new Sensor
+                        {
+                            Id = sensorNo.ToString(), // new Guid().ToString(),
+                            SensorType = (SensorType)sensorNo,
+                            TimeStamp = DateTime.Now.Ticks
+                        };
+
+                        sensorNo++;
+                        if (sensorNo > 7)
+                            sensorNo = 0;
+
+                        if (sensorNo < 4)
+                        {
+                            sensor.Value = (((float)rnd.Next(10000)) / 100.0);
+                        }
+                        else if (sensorNo < 5)
+                        {
+                            sensor.Values = new List<double>();
+                            sensor.Values.Add(((float)rnd.Next(10000)) / 100.0);
+                            sensor.Values.Add(((float)rnd.Next(10000)) / 100.0);
+                            sensor.Values.Add(((float)rnd.Next(10000)) / 100.0);
+                        }
+                        else if (sensorNo < 6)
+                        {
+                            sensor.environ = new BlazorSensorAppNet5.Environ();
+                            sensor.environ.Temperature = ((float)rnd.Next(6000)) / 100.0;
+                            sensor.environ.Humidity = ((float)rnd.Next(10000)) / 100.0;
+                            sensor.environ.Pressure = ((float)rnd.Next(100010)) / 100.0;
+                        }
+                        else
+                        {
+                            int rndv = rnd.Next(9);
+                            bool bstate = true;
+                            if (rndv < 5)
+                                bstate = false;
+                            sensor.State = bstate;
+                        }
+
+                        string sensorJson = JsonConvert.SerializeObject(sensor, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+                        Console.WriteLine(sensorJson);
+
+                        await SendSensor(sensorJson);
+                    }
+                    catch (TimeoutException)
+                    {
+                    }
+                    int timeout = Timeout;
+                    timeout *= 10000;
+                    long ts2 = DateTime.Now.Ticks;
+                    while (ts2 < ts + timeout)
+                    {
+                        Thread.Sleep(100);
+                        ts2 = DateTime.Now.Ticks;
+                    }
+                    ts = ts2;
+                }
+            }
+        }
         public static async Task Read()
         {
             // Device expects an initial char to complete SetUp()
@@ -324,22 +559,23 @@ namespace SerialBlazor
                         switch (resp)
                         {
                             case "0":
-                                Console.WriteLine("Trying");
+                                Console.Write("Trying");
                                 break;
                             case "1":
-                                Console.WriteLine("Done");
+                                Console.Write("Done");
                                 keepTrying = false;
                                 break;
                             case "-1":
                                 keepTrying = false;
-                                Console.WriteLine("There was a a problem with the transmission.");
+                                Console.Write("There was a a problem with the transmission.");
                                 break;
                             case "-2":
                                 keepTrying = false;
-                                Console.WriteLine("There was a service error.");
+                                Console.Write("There was a service error.");
                                 break;
                         }
                     }
+                    Console.WriteLine(" - {0}", DateTime.Now.TimeOfDay.Seconds);
                 }
                 else
                 {
@@ -362,7 +598,7 @@ namespace SerialBlazor
             {
                 client.BaseAddress = new Uri(_host);
                 // Note no "api/Sensor" but just "Sensor" in next LOC!:
-                Console.Write("Sending ... ");
+                Console.Write("Sending Commands ... ");
                 List<string> cmds = new List<string>(commands.Split(','));
                 //DeviceCommands deviceCommands = new DeviceCommands { Id = "", Commands = cmds };
                 //var response = await client.PostAsync("CommansdsDirectFromHub/PostAddCommands", new StringContent(commands, Encoding.UTF8));
@@ -383,6 +619,7 @@ namespace SerialBlazor
             {
                 Console.WriteLine(ex.Message);
             }
+
         }
     }
     public class Settings
@@ -400,6 +637,12 @@ namespace SerialBlazor
 
         public string ReadCommandsController { get; set; }
         public string SensorController { get; set; }
+
+        public bool IsDevice { get; set; }
+
+        public string CommandsIfIsDevice { get; set; }
+
+        public int defaultTimeout { get; set; }
 
 
 

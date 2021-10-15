@@ -137,6 +137,16 @@ namespace BlazorSensorAppNet5.Server.Controllers
         {
             if (!string.IsNullOrEmpty(commandNames.Trim()))
             {
+                if (SimulatedDevicewithCommands.Program.IsRunning)
+                {
+                    await SimulatedDevicewithCommands.Program.Stop();
+                    if (Commands2DeviceController.Commands != null)
+                        Commands2DeviceController.Commands.Clear();
+                    Callbacks = new Dictionary<string, Sensor.CommandCallback>();
+                    commandNames = "";
+                }
+                else
+                    commandNames = "";
                 string addedCommands = "";
                 Dictionary<string, Sensor.CommandCallback> callbacks = new Dictionary<string, Sensor.CommandCallback>();
                 Sensor.CommandCallback cb = TestCallBack;
@@ -156,7 +166,7 @@ namespace BlazorSensorAppNet5.Server.Controllers
                 {
                     string connect_stringDev = this.appsettings.IOTHUB_DEVICE_CONN_STRING;
                     await SimulatedDevicewithCommands.Program.Main(new string[] { connect_stringDev, addedCommands }, callbacks);
-                    commandNames += "," + addedCommands;
+                    commandNames = addedCommands;
                     return Ok($"Device Comamnd device Listener added commands {addedCommands}.");
                 }
                 else
