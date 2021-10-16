@@ -35,7 +35,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\BlazorIoTBridge\Shared -DNC\BlazorIoTBridge.SharedDNC.csproj" />
-    <ProjectReference Include="C:\Users\DavidJones\source\repos\BlazorSensorAppNet5\BlazorSensorAppNet5\Shared -DNC\BlazorIoTBridge.SharedDNC.csproj" />
   </ItemGroup>
+
+
 
 </Project>
