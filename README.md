@@ -9,7 +9,7 @@ This is a  .Net 5 version update of
 -   Blazor Server for forwarding telemetry to an Azure IoT Hub
     -   Connection strings required
     -   Currently in server appsettings.json
-    -   Client has page for setting connection strings but currently not used.
+    -   _(Client has page for setting connection strings but currently not used.)_
 -   Wasm Client app for forwarding simulated telemetry via the server.
 -   Can similarly on-forward real or simulated telemetry from RPi, Arduino etc
 -   -   .Net console app for desktop and say, RPi, that forwards telemetry via Http Post
