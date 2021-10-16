@@ -44,3 +44,9 @@ There is a PnP oriented Azure IoTBridge app: [Azure IoT Central Device Bridge](h
         from the hub that is polled by the device.
     -   (Simulated) device apps forward a list of commands at start that the
         Client uses to generate a menu of commands.
+        
+ ## 2Dos
+ - Recreate Http Post Arduino app
+ - Update image above
+ - Add back in real sensor telemetry to devices.
+ - Allow for multiple devices to simulatneously use same Blazor service.
