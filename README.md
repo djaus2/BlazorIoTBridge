@@ -8,7 +8,7 @@ This is a  .Net 5 version update of
 
 -   Blazor Server for forwarding telemetry to an Azure IoT Hub
     -   Connection strings required
--   Wasm app for forwarding simulated telemetry via the server.
+-   Wasm Client app for forwarding simulated telemetry via the server.
 -   Can similarly on-forward real or simulated telemetry from RPi, Arduino etc
 -   -   .Net console app for desktop and say, RPi, that forwards telemetry via Http Post
         to the Blazor service … simulated data at this stage.
