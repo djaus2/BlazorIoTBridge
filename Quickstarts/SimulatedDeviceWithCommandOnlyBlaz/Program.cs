@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 using System.Collections.Generic;
 using System.Net.Http;
-using BlazorSensorAppNet5.Shared;
+using BlazorIoTBridge.Shared;
 
 
 namespace SimulatedDevicewithCommands

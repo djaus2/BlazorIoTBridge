@@ -1,0 +1,254 @@
+﻿@page "/d2csensordata"
+@using BlazorIoTBridge.Shared
+@inject HttpClient Http
+@using Newtonsoft.Json
+@using Newtonsoft.Json.Converters;
+@using System.Dynamic
+
+<h1>Device to Cloud Sensor Telemetry Data</h1>
+
+<p>This component demonstrates fetching IoT D2C data from the IoT device via the server.</p>
+
+@if (messagesJson == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="t1" >
+    @LogMsg
+    </table>
+}
+
+
+
+@code {
+    private List<Sensor> sensors = null; //new List<Sensor>();
+    private List< System.Dynamic.ExpandoObject> messages;
+    private List<string> messagesJson = null;
+    private string msgraw;
+  
+    MarkupString  LogMsg = new MarkupString();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await Refresh();
+    }
+
+     private async Task Clear()
+    {
+       /* string Result = "Busy";
+        var result = await Http.PostAsJsonAsync<int>("sensor", 1);
+       // Log(String.Format(result.StatusCode);
+        Result = result.StatusCode.ToString();
+        await Refresh();*/
+    }
+
+
+    private async Task Refresh()
+    {
+        messagesJson = null;
+        LogMsg = new MarkupString();
+        msgraw = "";
+        long lastTS = 0;
+        string Result = "Busy";
+        var data = await Http.GetFromJsonAsync<string[]>("D2CTelemetryLog");
+        messagesJson = new List< string> ( data );
+        foreach (var json in messagesJson)
+        {
+                //System.Dynamic.ExpandoObject}	dd =  {System.Dynamic.ExpandoObject} msg;
+            dynamic message = JsonConvert.DeserializeObject<ExpandoObject>(json, new ExpandoObjectConverter());
+                //long ts = message.TimeStamp;
+                if (true) //(ts > lastTS)
+                {
+                    //lastTS = ts;;
+
+                    Logg("<h3><i><font color='blue'>Telemetry</font></i></h2>");
+                    foreach (var property in (IDictionary<String, Object>)message)
+                    {
+                        if (property.Value != null)
+                        {
+                            if (property.Value.GetType().Name == "ExpandoObject")
+                            {
+                                dynamic expandoValues = property.Value;
+
+                                bool isNullOrEmpty = true;
+                                if (expandoValues != null)
+                                {
+                                    foreach (var propertyExpando in (IDictionary<String, Object>)expandoValues)
+                                    {
+                                        if (isNullOrEmpty)
+                                        {
+                                            Log( property.Key, " ... has properties:", property.Value.GetType());
+                                            isNullOrEmpty = false;
+                                        }
+                                        Log("",string.Format("{0,18} : {1,-19}",propertyExpando.Key, propertyExpando.Value), propertyExpando.Value.GetType());
+                                    }
+                                    if (isNullOrEmpty)
+                                        Log (property.Key, " ... has no properties", property.Value.GetType());
+                                }
+                                else
+                                    Log( property.Key, " ...is null", property.Value.GetType());
+
+                            }
+                            else if (property.Value.GetType().Name == "List`1") // i.e. System.Collections.Generic.List<T> where T is a simple Value Type ??
+                            {
+                                dynamic values = property.Value;
+                                if (values.Count != 0)
+                                {
+                                    string listType = values[0].GetType().FullName;
+                                    if (listType == 24.3D.GetType().FullName)
+                                    {
+                                        Log(property.Key," ... is List of double:");
+                                        foreach (var x in values)
+                                        {
+                                            double xx = (double)x;
+                                            Log( "", xx, xx.GetType());
+                                        }
+                                    }
+                                    else if (listType == 137.GetType().FullName)
+                                    {
+                                        Log( property.Key, " ... is List of Int64:");
+                                        foreach (var x in values)
+                                        {
+                                            int xx = (int)x;
+                                            Log( "", xx, xx.GetType());
+                                        }
+                                    }
+                                    else if (listType == "string".GetType().FullName)
+                                    {
+                                        Log(property.Key," ... is List of string:");
+                                        foreach (var x in values)
+                                        {
+                                            string xx = (string)x;
+                                            Log( "", xx, xx.GetType());
+                                        }
+                                    }
+                                    else if (listType == false.GetType().FullName)
+                                    {
+                                        Log(property.Key," ... is List of bool:");
+                                        foreach (var x in values)
+                                        {
+                                            bool xx = (bool)x;
+                                            Log( "", xx, xx.GetType());
+                                        }
+                                    }
+                                    else if (listType == DateTime.Now.GetType().FullName)
+                                    {
+                                        Log(property.Key," ... is List of DateTime:");
+                                        foreach (var x in values)
+                                        {
+                                            DateTime xx = (DateTime)x;
+                                            Log( "", xx, xx.GetType());
+                                        }
+                                    }
+                                    else
+                                    {
+                                        int num = values.Count;
+                                        Log(String.Format("List is of more complex type: {0}. Number of elements: {1}", listType, num));
+                                    }
+                                }
+                                else
+                                    Log(property.Key, "Empty List of double");
+                            }
+                            else if (property.Value.GetType().Name == "121345".GetType().Name)
+                            {
+                                Guid guid;
+                                if (Guid.TryParse((string)property.Value, out guid))
+                                {
+                                    Log(property.Key, property.Value,"System.Guid");
+                                }
+                                else
+                                    Log( property.Key, property.Value, property.Value.GetType());
+                            }
+                           else
+			                {
+                                if (property.Value.GetType().Name == "Double")
+                                {
+                                    // Skip null integers. -1 is used as Json value can't be null
+                                    double vald = (double)property.Value;
+                                    if (vald == Sensor.iNull)
+                                        continue;
+                                }
+                                Log(property.Key, property.Value, property.Value.GetType()); //, property.Value.GetType()); //, property.Value.GetType());
+			                }
+                        }
+                    }
+                    Logg("&nbsp;");
+
+                    /*Log(String.Format("\tApplication properties (set by device):");
+                    foreach (KeyValuePair<string, object> prop in partitionEvent.Data.Properties)
+                    {
+                        PrintProperties(prop);
+                    }
+
+                    Log(String.Format("\tSystem properties (set by IoT Hub):");
+                    foreach (KeyValuePair<string, object> prop in partitionEvent.Data.SystemProperties)
+                    {
+                        PrintProperties(prop);
+                    }*/
+                }
+
+        }
+        StateHasChanged();
+    }
+
+
+    void Logg( string msg)
+    {
+        msgraw += "<tr><td colspan=\"3\">" +msg +"</td>";
+        LogMsg = new MarkupString(msgraw);
+    }
+    void Log(object omsg)
+    {
+        string msg = string.Format("{0}",omsg);
+        msgraw += "<tr>" + "<td>" + msg + "</td>" + "</tr>";
+        LogMsg = new MarkupString(msgraw);
+        StateHasChanged();
+    }
+
+    void Log(object  omsg, object omsg2)
+    {
+        string msg = string.Format("{0}",omsg);
+        string msg2 = string.Format("{0}",omsg2);
+        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td>" + msg2 + "</td>" + "</tr>";
+        LogMsg = new MarkupString(msgraw);
+        StateHasChanged();
+    }
+
+    void Log(object omsg, object omsg2, object omsg3)
+    {
+        string msg = string.Format("{0}",omsg);
+        string msg2 = string.Format("{0}",omsg2);
+        string msg3 = string.Format("{0}",omsg3);
+        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "</tr>";
+        LogMsg = new MarkupString(msgraw);
+        StateHasChanged();
+    }
+
+        void Log(object omsg, object omsg2, object omsg3, object omsg4)
+    {
+        string msg = string.Format("{0}",omsg);
+        string msg2 = string.Format("{0}",omsg2);
+        string msg3 = string.Format("{0}",omsg3);
+        string msg4 = string.Format("{0}",omsg4);
+        msgraw += "<tr>" + "<td>" + msg + ":</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "<td>" + msg4 + "</td>" + "</tr>";
+        LogMsg = new MarkupString(msgraw);
+        StateHasChanged();
+    }
+
+    void Log4(object omsg, object omsg2, object omsg3, object omsg4)
+    {
+        string msg = string.Format("{0}",omsg);
+        string msg2 = string.Format("{0}",omsg2);
+        string msg3 = string.Format("{0}",omsg3);
+        string msg4 = string.Format("{0}",omsg4);
+        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td><table><tr><td>" + msg2 + "</td><td align=\"right\">" + msg3 + "</td></tr></table></td>" + "<td>" + msg4 + "</td>" + "</tr>";
+        LogMsg = new MarkupString(msgraw);
+        StateHasChanged();
+    }
+
+
+
+}

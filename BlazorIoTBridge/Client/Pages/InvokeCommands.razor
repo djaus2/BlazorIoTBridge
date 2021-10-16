@@ -1,0 +1,60 @@
+﻿@page "/invokecommands"
+
+
+@inject HttpClient client
+
+<h1>Invoke Commands on Device via the Hub</h1>
+
+<button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
+Command:&nbsp;<input type="text" @bind="@command"/><br />
+Parameter:&nbsp;<input type="text" @bind="@value"/> <br />
+@((MarkupString)Response)
+<br />
+<b><i>Nb: &nbsp; Inspect the returned Commands Queue on "Direct Commands".</i></b>
+
+@code {
+    private int currentCount = 0;
+    private string command { get; set; } = "StartListening";
+    private string value { get; set; } = "10";
+    bool run = true;
+    string Response = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await base.OnInitializedAsync();
+    }
+
+
+    private async Task StartReads()
+    {
+        Response = "Busy";
+        StateHasChanged();
+        int val;
+        BlazorIoTBridge.Shared.Command cmd;
+        if (!int.TryParse(value, out val))
+            cmd = new BlazorIoTBridge.Shared.Command { Action = command };
+        else
+            cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
+        cmd.Invoke = true;
+        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommansdsDirectFromHub/PostCommands", cmd,null);
+        command = "";
+        value = "";
+        cmd = null;
+        string content = await response.Content.ReadAsStringAsync();
+        if (response.IsSuccessStatusCode)
+        {
+            System.Diagnostics.Debug.WriteLine("Sent OK");
+            Response = $"Sent Ok<br/>{content}";
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+            Response = $"Not OK: {response.StatusCode} {response.ReasonPhrase}";
+            Response += $"<br/>{content}";
+        }
+        StateHasChanged();
+    }
+
+
+}

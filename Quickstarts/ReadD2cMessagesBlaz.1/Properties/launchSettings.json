@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ReadD2cMessages": {
+      "commandName": "Project",
+      "commandLineArgs": "-c Endpoint=sb://iothub-ns-pnphub4-14855393-855d540dfb.servicebus.windows.net/;SharedAccessKeyName=iothubowner;SharedAccessKey=qJmy/QM41wN+gXqi75azebWM57f4Jusm+SIny/+NkXw=;EntityPath=pnphub4"
+    }
+  }
+}

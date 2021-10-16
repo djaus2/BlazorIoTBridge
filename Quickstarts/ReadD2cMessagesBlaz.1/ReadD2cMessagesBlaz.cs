@@ -24,7 +24,7 @@ using System.IO;
 using System.Net.Http;
 //using System.Net.Http.Json;
 
-using BlazorIoTBridge.SharedDNC;
+using BlazorSensorAppNet5.SharedDNC;
 
 
 

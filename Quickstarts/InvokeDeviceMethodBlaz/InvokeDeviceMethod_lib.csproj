@@ -19,7 +19,8 @@
   
 
   <ItemGroup>
-    <ProjectReference Include="C:\Users\DavidJones\source\repos\BlazorSensorAppNet5\BlazorSensorAppNet5\Shared\BlazorSensorAppNet5.Shared.csproj" />
+    <ProjectReference Include="..\..\BlazorIoTBridge\Shared\BlazorIoTBridge.Shared.csproj" />
+    <ProjectReference Include="..\..\BlazorSensorAppNet5\Shared\BlazorIoTBridge.Shared.csproj" />
   </ItemGroup>
   
 
