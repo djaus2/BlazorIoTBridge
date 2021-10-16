@@ -1,7 +1,8 @@
 # BlazorSensorAppNet5
 
-A .Net 5 version update of
-[djaus2/BlazorSensorApp](https://github.com/djaus2/SensorBlazor)
+## Background
+This is a  .Net 5 version update of
+[djaus2/BlazorSensorApp](https://github.com/djaus2/SensorBlazor). 
 
 ## Includes
 
