@@ -50,3 +50,4 @@ There is a PnP oriented Azure IoTBridge app: [Azure IoT Central Device Bridge](h
  - Update image above
  - Add back in real sensor telemetry to devices.
  - Allow for multiple devices to simulatneously use same Blazor service.
+ - Setting or registering device specific connection information via the client.
