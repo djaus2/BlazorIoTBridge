@@ -4,18 +4,18 @@
 
 ## Background
 This is a  .Net 5 version update of
-[djaus2/BlazorSensorApp](https://github.com/djaus2/SensorBlazor). This forwarded Telemetry messages to an IoT Hub. The telemetry could be generated in the Blazor Client. Alternatively there were Arduino and .Net Core console app RPi apps that could forward simuated or real telemetry via Http Posts to the Blazor service for on-forwarding. This version continues with a port of the console app to .Net 5, still forwarding Telemetry to the service via Http Posts _(for on-forwarding to the hub)_. The app has two modes of operation; for this it runs in Http mode. The Http Post option for Arduino has been dropped _(to be added back later)_, but reimplemented using the USB serial connection to a desktop. With this the conole app runs in the alternative mode where it communicates with the Arduino device serially to get telemetry and send commands. IoT Hub commands can be sent to the device whether he console app is running in Http Post mode, or in the Arduino serial mode.  
+[djaus2/BlazorSensorApp](https://github.com/djaus2/SensorBlazor). This forwarded Telemetry messages to an IoT Hub. The telemetry could be generated in the Blazor Client. Alternatively there were Arduino and .Net Core console app RPi apps that could forward simulated or real telemetry via Http Posts to the Blazor service for on-forwarding. This version continues with a port of the console app to .Net 5, still forwarding Telemetry to the service via Http Posts _(for on-forwarding to the hub)_. The app has two modes of operation; for this it runs in Http mode. The Http Post option for Arduino has been dropped _(to be added back later)_, but reimplemented using the USB serial connection to a desktop. With this the console app runs in the alternative mode where it communicates with the Arduino device serially to get telemetry and send commands. IoT Hub commands can be sent to the device whether he console app is running in Http Post mode, or in the Arduino serial mode.  
 
 ![To be updated](https://davidjones.sportronics.com.au/media/6654cbce699ec4b61570f6fc308ef894_60.png)  
 To be updated for serial connections.
 
 ## Other
-There is a PnP oriented Azure IoTBridge app: [Azure IoT Central Device Bridge](https://github.com/Azure/iotc-device-bridge).  This project is a simpler implementation without PnP capabilities. This project is simply focused upon sending and minitoring Telemetry as well as implementing commands.
+There is a PnP oriented Azure IoTBridge app: [Azure IoT Central Device Bridge](https://github.com/Azure/iotc-device-bridge).  This project is a simpler implementation without PnP capabilities. This project is simply focused upon sending and monitoring Telemetry as well as implementing commands.
 
 ## Other Links
 - [Azure IoT device SDKs](https://docs.microsoft.com/en-us/azure/iot-hub/iot-hub-devguide-sdks)
-- In another previous project, [Azure IoT Hub Toolbox](https://github.com/djaus2/Azure.IoTHub.Toolbox) the Azure IoT Hub SDK Qickstart sample apps were integrated into a single UWP app (with a UI). This new project implements similar functionality. 
-- Much work has also been done to orchestrate Azure IoT Hub and related entities as a set of PowerShell scripts. That project is [Azure IoT Hub PowerShell Scripts](https://github.com/djaus2/az-iothub-ps) This is a menu driven set of scripts. It includes sample apps to deploy, Az Spehere etc.
+- In another previous project, [Azure IoT Hub Toolbox](https://github.com/djaus2/Azure.IoTHub.Toolbox) the Azure IoT Hub SDK Quickstarts sample apps were integrated into a single UWP app (with a UI). This new project implements similar functionality. 
+- Much work has also been done to orchestrate Azure IoT Hub and related entities as a set of PowerShell scripts. That project is [Azure IoT Hub PowerShell Scripts](https://github.com/djaus2/az-iothub-ps) This is a menu driven set of scripts. It includes sample apps to deploy, Az Sphere etc.
 
 ## Functionality
 
@@ -56,5 +56,5 @@ There is a PnP oriented Azure IoTBridge app: [Azure IoT Central Device Bridge](h
  - Recreate Http Post Arduino app
  - Update image above
  - Add back in real sensor telemetry to devices.
- - Allow for multiple devices to simulatneously use same Blazor service.
+ - Allow for multiple devices to simultaneously use same Blazor service.
  - Setting or registering device specific connection information via the client.
