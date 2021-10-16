@@ -6,7 +6,7 @@
 This is a  .Net 5 version update of
 [djaus2/BlazorSensorApp](https://github.com/djaus2/SensorBlazor). This forwarded Telemetry messages to an IoT Hub. The telemetry could be generated in the Blazor Client. Alternatively there were Arduino and .Net Core console app RPi apps that could forward simulated or real telemetry via Http Posts to the Blazor service for on-forwarding. This version continues with a port of the console app to .Net 5, still forwarding Telemetry to the service via Http Posts _(for on-forwarding to the hub)_. The app has two modes of operation; for this it runs in Http mode. The Http Post option for Arduino has been dropped _(to be added back later)_, but reimplemented using the USB serial connection to a desktop. With this the console app runs in the alternative mode where it communicates with the Arduino device serially to get telemetry and send commands. IoT Hub commands can be sent to the device whether he console app is running in Http Post mode, or in the Arduino serial mode.  
 
-![Architecture](https://davidjones.sportronics.com.au/media/iotbridge_60.png)  
+![Architecture](https://davidjones.sportronics.com.au/media/iotbridge.png)  
 The architecture of this solution.
 
 ## Other
