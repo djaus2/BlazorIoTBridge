@@ -17,7 +17,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReadD2cMessagesBlaz_app", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorIoTBridge.SharedDNC", "BlazorIoTBridge\Shared -DNC\BlazorIoTBridge.SharedDNC.csproj", "{986696EA-888C-4895-9167-AB02DDDEB433}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Seria2lBlazor_app", "BlazorIoTBridge\Serial2Blazor\Seria2lBlazor_app.csproj", "{7DC47C97-35E5-4802-B4E4-2A056422B781}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Serial2lBlazor_app", "BlazorIoTBridge\Serial2Blazor\Serial2lBlazor_app.csproj", "{7DC47C97-35E5-4802-B4E4-2A056422B781}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
