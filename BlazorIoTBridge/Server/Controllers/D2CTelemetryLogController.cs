@@ -11,6 +11,7 @@ using System.Threading;
 using System.Collections.Concurrent;
 using System.Dynamic;
 using Newtonsoft.Json.Converters;
+using BlazorIoTBridge.Server.Data;
 
 namespace BlazorIoTBridge.Server.Controllers
 {
@@ -37,10 +38,12 @@ namespace BlazorIoTBridge.Server.Controllers
         private static List<dynamic> D2CMessages { get; set; }
         private static List<string> D2CMessagesJson { get; set; }
 
+ 
+        private readonly IDataAccessService dataaccesssservice;
 
-
-        public D2CTelemetryLogController(AppSettings _appsettings)
+        public D2CTelemetryLogController(AppSettings _appsettings, IDataAccessService _dataaccesservice)
         {
+            this.dataaccesssservice = _dataaccesservice;
             appsettings = _appsettings;
 
             if (D2CMessages == null)

@@ -24,7 +24,11 @@ namespace BlazorIoTBridge.Server.Controllers
     /// </summary>
     public class SimulatedDeviceCS
     {
-        private static DeviceClient s_deviceClient;
+
+
+
+        public static DeviceClient s_deviceClient { get => SimulatedDevicewithCommands.Client4Commands.s_deviceClient; set => SimulatedDevicewithCommands.Client4Commands.s_deviceClient = value; }
+
 
         // The device connection string to authenticate the device with your IoT hub.
         // Using the Azure CLI:
@@ -36,6 +40,7 @@ namespace BlazorIoTBridge.Server.Controllers
         // - set the IOTHUB_DEVICE_CONN_STRING environment variable 
         // - create a launchSettings.json (see launchSettings.json.template) containing the variable
         private static string s_connectionString = Environment.GetEnvironmentVariable("IOTHUB_DEVICE_CONN_STRING");
+
 
         /// <summary>
         /// Async method to send simulated telemetry,
@@ -56,7 +61,9 @@ namespace BlazorIoTBridge.Server.Controllers
             try
             {
                 System.Diagnostics.Debug.WriteLine("{0} > Sending message: {1}", DateTime.Now, messageString);
+                Monitor.Enter(SimulatedDevicewithCommands.Client4Commands.s_deviceClient);
                 await s_deviceClient.SendEventAsync(message);
+                Monitor.Exit(SimulatedDevicewithCommands.Client4Commands.s_deviceClient);
                 System.Diagnostics.Debug.WriteLine("{0} > Sent message (OK?): {1}", DateTime.Now, messageString);
                 return true;
             } catch (Exception ex)
@@ -73,13 +80,15 @@ namespace BlazorIoTBridge.Server.Controllers
         {
             System.Diagnostics.Debug.WriteLine("===== Starting StartMessageSending =====");
 
+
             s_connectionString = _connection_string; //Shared.AppSettings.settings.IOTHUB_DEVICE_CONN_STRING;
 
             System.Diagnostics.Debug.WriteLine("Code from IoT Hub Quickstarts from Azure IoT Hub SDK");
             System.Diagnostics.Debug.WriteLine("Using Env Var IOTHUB_DEVICE_CONN_STRING = " + s_connectionString);
 
             // Connect to the IoT hub using the MQTT protocol
-            s_deviceClient = DeviceClient.CreateFromConnectionString(s_connectionString, TransportType.Mqtt);
+            if (s_deviceClient != null)
+                s_deviceClient = DeviceClient.CreateFromConnectionString(s_connectionString, TransportType.Mqtt);
             System.Diagnostics.Debug.WriteLine("===== Finished StartMessageSending =====");
         }
 

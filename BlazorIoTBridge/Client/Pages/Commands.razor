@@ -4,19 +4,24 @@
 
 <h1>Commands</h1>
 <table>
-    <tr><td colspan="2"><button class="btn btn-primary" @onclick="StartReads">Send Command:</button></td></tr>
-     <tr><td>Type Command:&nbsp;</td><td><input type="text" @bind="@command"/></td></tr>
+    <tr><td colspan="2"><button class="btn btn-primary" @onclick="DoCommand">Send Command:</button></td></tr>
+     <tr><td>Type Command:&nbsp;</td><td><input type="text" @onkeydown="@Enter" @bind="@command"/></td></tr>
      <tr><td>Or Select Command:&nbsp;</td>
        <td>
            @if(@RegCmdz!= null)
-{
-    <select @onchange="DoStuff">
-        @foreach (var template in RegCmdz)
-        {
-            <option value=@template>@template</option>
-        }
-    </select>
-}
+            {
+                @if (showmenu)
+                {
+                    <select @onchange="OnSelectedCommand"  >
+                        <option value=""><i>Select</i></option>
+                        
+                        @foreach (var cmd in RegCmdz)
+                        {
+                            <option value=@cmd><b>@cmd</b></option>
+                        }
+                    </select>
+                }
+            }
        </td></tr>
       <tr><td>Parameter:&nbsp;</td><td><input type="text" @bind="@value"/></td></tr>
 
@@ -55,7 +60,7 @@
 
 @code {
     private int currentCount = 0;
-    private string command { get; set; } = "StartQ";
+    private string command { get; set; } = "";
     private string value { get; set; } = "";
     bool run = true;
     string Response = "";
@@ -63,16 +68,27 @@
     int iNull = (int)BlazorIoTBridge.Shared.Sensor.iNull;
     string RegisteredCommands;
     List<string> RegCmdz = null;
+    bool showmenu = true;
 
     System.Threading.Timer timer;
 
+public async Task Enter(KeyboardEventArgs e)
+{
+    if (e.Code == "Enter" || e.Code == "NumpadEnter")
+    {
+        if ((command != "Select") && (command !=""))
+        {
+            await DoCommand();
+        }
+    }
+
+}
+
+
     private  void SetClock(object stateInfo)
 	{
-        if (Response == "")
-        {
-            GetCommands().GetAwaiter();
-            StateHasChanged();
-        }
+        GetCommands().GetAwaiter();
+        StateHasChanged();
 	}
  
     void startTimer(int secs)
@@ -102,17 +118,19 @@
         startTimer(1);
     }
 
-    async Task DoStuff(ChangeEventArgs e)
+    async Task OnSelectedCommand(ChangeEventArgs e)
     {
         command = e.Value.ToString();
-        if (command != "Select")
+        if ((command != "Select") && (command !=""))
         {
-            await StartReads();
+            await DoCommand();
         }
     }
 
-    private async Task StartReads()
+    private async Task DoCommand()
     {
+        if ((command == "Select") || (command == ""))
+            return;
         Response = "Busy";
         int val;
         BlazorIoTBridge.Shared.Command cmd;
@@ -137,7 +155,10 @@
             Response += $"<br/>{content}";
         }
         await GetCommands();
-        Response = "";     
+        showmenu = false;
+        StateHasChanged();
+        showmenu = true;
+        StateHasChanged();
     }
 
     private async Task GetCommands()
@@ -148,14 +169,15 @@
         else
             commands = null;
     }
-
+  
     private async Task GetRegisteredCommands()
     {
+        RegCmdz=null;
         BlazorIoTBridge.Shared.Command cmd = new BlazorIoTBridge.Shared.Command { Action = "LISTCOMMANDS" , Invoke = true};
         var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommansdsDirectFromHub", cmd,null);
         RegisteredCommands = await response.Content.ReadAsStringAsync();
-        RegisteredCommands = "Select," + RegisteredCommands;
         RegCmdz = RegisteredCommands.Split(',').ToList<string>();
+        StateHasChanged();
     }
 
 

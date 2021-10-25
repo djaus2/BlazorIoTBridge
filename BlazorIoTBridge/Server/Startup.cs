@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using System.Linq;
 
 using BlazorIoTBridge.Shared;
+using BlazorIoTBridge.Server.Data;
 using System;
 
 namespace BlazorIoTBridge.Server
@@ -46,6 +47,7 @@ namespace BlazorIoTBridge.Server
             services.AddRazorPages();
 
             services.AddSingleton<IConfiguration>(Configuration);
+            services.AddSingleton<IDataAccessService,DataAccessService>();
 
             //services.AddSingleton (IAppSettings,AppSettings)
 

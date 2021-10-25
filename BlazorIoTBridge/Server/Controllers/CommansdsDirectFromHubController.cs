@@ -1,4 +1,5 @@
-﻿using BlazorIoTBridge.Shared;
+﻿using BlazorIoTBridge.Server.Data;
+using BlazorIoTBridge.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -29,34 +30,60 @@ namespace BlazorIoTBridge.Server.Controllers
         private static Dictionary<string, Sensor.CommandCallback> Callbacks = null;
         private readonly AppSettings appsettings;
 
-        public CommansdsDirectFromHubController(AppSettings _appsettings)
+        private readonly IDataAccessService dataservice;
+
+  
+
+        public CommansdsDirectFromHubController(AppSettings _appsettings, IDataAccessService _dataservice)
         {
             this.appsettings = _appsettings;
+            this.dataservice = _dataservice;
             if (Callbacks == null)
-                Callbacks = new Dictionary<string, Sensor.CommandCallback>();
+            Callbacks = new Dictionary<string, Sensor.CommandCallback>();
         }
 
-        public async Task TestCallBack(string cmd, int param)
+        public async Task CallBack2Device(string cmd, int param)
         {
-            System.Diagnostics.Debug.WriteLine($"TestCallBack was called with command: {cmd} param: {param}.");
-            Shared.Command command = new Command { Action = cmd, Parameter = param, Invoke = false };
-            Commands2DeviceController.SetCommand(command);
-            System.Diagnostics.Debug.WriteLine($"Number of comamnds in Q: {Commands2DeviceController.Commands.Count()}");
+            Shared.Command command;
+            if (param != -2147483648)
+            {
+                System.Diagnostics.Debug.WriteLine($"TestCallBack was called with command: {cmd} param: {param}.");
+                command = new Command { Action = cmd, Parameter = param, Invoke = false };
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"TestCallBack was called with command: {cmd}");
+                command = new Command { Action = cmd,  Invoke = false };
+            }
+            dataservice.EnqueueCommand(command);
+            System.Diagnostics.Debug.WriteLine($"Number of comamnds in Q: {dataservice.CommandsCount()}");
             await Task.Delay(333);
         }
 
+        //public async Task CallBack2DeviceStrn(string cmd, string param)
+        //{
+        //    System.Diagnostics.Debug.WriteLine($"TestCallBack was called with command: {cmd} param: {param}.");
+        //    Shared.CommandStrn commandStrn = new CommandStrn { Action = cmd, Parameter = param, Invoke = false };
+        //    Shared.Command command = new Command { Action = commandStrn.Parameter,  Invoke = false };
+        //    dataservice.EnqueueCommand(command);
+        //    System.Diagnostics.Debug.WriteLine($"Number of comamnds in Q: {dataservice.CommandsCount()}");
+        //    await Task.Delay(333);
+        //}
 
-        private static string commandNames = "GETCOMMANDS";
+
+        private static string CommandNamesCsv = "";
         private static List<string> cmds;
         [HttpPost]
         public async Task<IActionResult> Post(Object obj)
         {
            
             string json = obj.ToString();
-            if (json[0] == '[')
+            if ((json[0] == '[') && (json[json.Length-1] ==']'))
             {
-                List<string> cmdNames = JsonConvert.DeserializeObject<List<string>>(json);
-                return await AddCommands(cmdNames);
+                //Is csv list of command names
+                CommandNamesCsv = json.Substring(1, json.Length - 2);
+                CommandNamesCsv = CommandNamesCsv.Replace("\"","");
+                return await SetCommands(CommandNamesCsv);
             }
 
             Command cmd = JsonConvert.DeserializeObject<Command>(json);
@@ -66,38 +93,24 @@ namespace BlazorIoTBridge.Server.Controllers
             {
                 if (cmd.Action.ToUpper() == "LISTCOMMANDS")
                 {
-                        return Ok($"{commandNames}");
+                    return Ok($"{CommandNamesCsv}");
                 }
-                if (cmd.Action.ToUpper() == "STARTLISTENING")
+                else if ((cmd.Action.ToUpper() == "STARTLISTENING") || (cmd.Action.ToUpper() == "STARTL"))
                 {
-                    if (!SimulatedDevicewithCommands.Program.IsRunning)
+                    if (!SimulatedDevicewithCommands.Client4Commands.IsRunning)
                     {
-                        Commands2DeviceController.ResetQ(true);
-                        Sensor.CommandCallback cb = TestCallBack;
-
-                        cmds = commandNames.Split(',').ToList<string>();
-                        Dictionary<string, Sensor.CommandCallback> callbacks = new Dictionary<string, Sensor.CommandCallback>();
-                        foreach (var name in cmds)
-                        {
-                            callbacks.Add(name, cb);
-                            Callbacks.Add(name, cb);
-                        }
-                        string names = String.Join(",", commandNames.ToArray());
-                        string connect_stringDev = this.appsettings.IOTHUB_DEVICE_CONN_STRING;
-                        await SimulatedDevicewithCommands.Program.Main(new string[] { connect_stringDev, commandNames },callbacks);
-                        return Ok("Device Comamnd device Listener started.");
+                        return await SetCommands(CommandNamesCsv);
                     }
                     else
                         return BadRequest($"{cmd.Action} : Device Command Listener already running.");
 
                 }
-                else if (cmd.Action.ToUpper() == "STOPLISTENING")
+                else if ((cmd.Action.ToUpper() == "STOPLISTENING") || (cmd.Action.ToUpper() =="STOPL"))
                 {
-                    if (SimulatedDevicewithCommands.Program.IsRunning)
+                    if (SimulatedDevicewithCommands.Client4Commands.IsRunning)
                     {
-                        await SimulatedDevicewithCommands.Program.Stop();
-                        if (Commands2DeviceController.Commands != null)
-                            Commands2DeviceController.Commands.Clear();
+                        await SimulatedDevicewithCommands.Client4Commands.Stop();
+                        dataservice.Reset(false);
                         Callbacks = new Dictionary<string, Sensor.CommandCallback>();
                         return Ok($"{cmd.Action} : Device Command Listener was stopped.");
                     }
@@ -108,14 +121,14 @@ namespace BlazorIoTBridge.Server.Controllers
                 {
 
                     // This goes up to the hub and comes back here to the Callback via the Listener
-                    if ((!SimulatedDevicewithCommands.Program.IsRunning))
+                    if ((!SimulatedDevicewithCommands.Client4Commands.IsRunning))
                     {
                         return NotFound($"{ cmd.Action} : Device Command Listener has not been started. Use \"StartListening\" command.");
                     }
-                   else if (!cmds.Contains(cmd.Action))
+                   else if (!Callbacks.Keys.Contains(cmd.Action))
                         return NotFound($"{ cmd.Action} : Listener not listening for that command.");
                     string command_string = this.appsettings.SERVICE_CONNECTION_STRING;
-                    Task t3 = Task.Run(() => InvokeDeviceMethod.Program.Main(new string[] { command_string, cmd.Action, cmd.Parameter.ToString() }));
+                    Task t3 = Task.Run(() => InvokeDeviceMethod.InvokeDeviceMethodLib.Main(new string[] { command_string, cmd.Action, cmd.Parameter.ToString() }));
                     await t3;
                     return Ok($"Device command {cmd.Action} device issued.");
                 }
@@ -126,51 +139,44 @@ namespace BlazorIoTBridge.Server.Controllers
         [HttpGet]
         public IEnumerable<Command> Get()
         {
-            if (Commands2DeviceController.Commands != null)
-                return Commands2DeviceController.Commands.ToArray();
-            else return new Command[0];
+            return dataservice.GetCommands().ToArray(); ;
         }
 
 
 
-        public async Task<IActionResult> AddCommands(List<string> cmds)
+
+        public async Task<IActionResult> SetCommands(string commandNamesCsv)
         {
-            if (!string.IsNullOrEmpty(commandNames.Trim()))
+            
+            if (!string.IsNullOrEmpty(commandNamesCsv.Trim()))
             {
-                if (SimulatedDevicewithCommands.Program.IsRunning)
+                commandNamesCsv = commandNamesCsv.Trim();
+                List<string> commandsList = commandNamesCsv.Split(',', StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries).ToList <string>();
+                if (commandsList.Count() != 0)
                 {
-                    await SimulatedDevicewithCommands.Program.Stop();
-                    if (Commands2DeviceController.Commands != null)
-                        Commands2DeviceController.Commands.Clear();
-                    Callbacks = new Dictionary<string, Sensor.CommandCallback>();
-                    commandNames = "";
-                }
-                else
-                    commandNames = "";
-                string addedCommands = "";
-                Dictionary<string, Sensor.CommandCallback> callbacks = new Dictionary<string, Sensor.CommandCallback>();
-                Sensor.CommandCallback cb = TestCallBack;
-                foreach (var name in cmds)
-                {
-                    if ((!Callbacks.ContainsKey(name)) && (!Callbacks.ContainsKey(name.ToUpper())) && (!Callbacks.ContainsKey(name.ToLower())))
+                    if (SimulatedDevicewithCommands.Client4Commands.IsRunning)
                     {
-                        if (addedCommands == "")
-                            addedCommands = name;
-                        else
-                            addedCommands += $",{name}";
-                        Callbacks.Add(name, cb);
-                        callbacks.Add(name, cb);
+                        await SimulatedDevicewithCommands.Client4Commands.Stop();
+                        dataservice.Reset(true);
                     }
-                }
-                if (addedCommands != "")
-                {
+
+                    Callbacks = new Dictionary<string, Sensor.CommandCallback>();
+                    Sensor.CommandCallback cb = CallBack2Device;
+                    foreach (var name in commandsList)
+                    {
+                        if ((!Callbacks.ContainsKey(name)) && (!Callbacks.ContainsKey(name.ToUpper())) && (!Callbacks.ContainsKey(name.ToLower())))
+                        {
+                            Callbacks.Add(name, cb);
+                        }
+                    }
+
                     string connect_stringDev = this.appsettings.IOTHUB_DEVICE_CONN_STRING;
-                    await SimulatedDevicewithCommands.Program.Main(new string[] { connect_stringDev, addedCommands }, callbacks);
-                    commandNames = addedCommands;
-                    return Ok($"Device Comamnd device Listener added commands {addedCommands}.");
+                    string commandNames = String.Join(",", commandsList.Select(x => x.ToString()).ToArray());
+                    ////await SimulatedDevicewithCommands.Client4Commands.Main(new string[] { connect_stringDev, commandNames }, Callbacks);
+                    return Ok($"Device Comamnd device Listener added commands {commandNames}.");
                 }
                 else
-                    return Ok($"No new commands added to Device Comamnd device Listener from {commandNames}.");
+                    return BadRequest($"Add commnds : No commands in csv");
             }
             else
                 return BadRequest($"Add commnds : No commands in csv");

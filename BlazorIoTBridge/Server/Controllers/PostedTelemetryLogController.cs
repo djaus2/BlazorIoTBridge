@@ -1,4 +1,5 @@
-﻿using BlazorIoTBridge.Shared;
+﻿using BlazorIoTBridge.Server.Data;
+using BlazorIoTBridge.Shared;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
@@ -25,20 +26,20 @@ namespace BlazorIoTBridge.Server.Controllers
     {
 
         private readonly AppSettings appsettings;
+        private readonly IDataAccessService dataaccesservice;
 
-        public PostedTelemetryLogController(AppSettings _appsettings)
+        public PostedTelemetryLogController(AppSettings _appsettings, IDataAccessService _dataaccesservice)
         {
+            this.dataaccesservice = _dataaccesservice;
             this.appsettings = _appsettings;
         }
 
-        public static  List<Sensor> PostLog;
 
         [HttpGet]
         public IEnumerable<Sensor> Get()
         {
-            if (PostLog == null)
-                PostLog = new List<Sensor>();
-            return PostLog.ToArray();
+            var logs = dataaccesservice.GetLogs();
+            return logs.ToArray();
         }
     }
 }

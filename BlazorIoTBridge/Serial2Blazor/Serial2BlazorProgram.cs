@@ -23,6 +23,8 @@ using System.Reflection;
 // Microsoft.Extensions.Configuration.Binder
 // Microsoft.Extensions.Configuration.Jso
 
+using SimulatedDeviceWithDefaultCommandOnly;
+
 namespace Serial2Blazor
 {
     class Program
@@ -44,9 +46,13 @@ namespace Serial2Blazor
         static bool IsFirstSerialRead = true;
         static string ReadCommandsUrl = "";
         static string SensorApi = "sensor";
-        static bool IsDevice = false;
-        static string CommandsIfIsDevice = "GETCOMANDS,RATE";
+        static bool IsRealDevice = false;
+        static string CommandsIfIsSimDevice = "GETCOMANDS,RATE";
         static int defaultTimeout = 5000;
+        static string IOTHUB_DEVICE_CONN_STRING = "";
+
+
+
         static void Main(string[] args)
         {
             var builder = new ConfigurationBuilder()
@@ -55,6 +61,8 @@ namespace Serial2Blazor
 
             IConfiguration configuration = builder.Build();
             Settings settings = configuration.GetSection("AppSettings").Get<Settings>();
+
+            
 
             _host = $@"{settings.Host}:{settings.Port}/";
             delay = settings.Delay_Secs;
@@ -66,15 +74,16 @@ namespace Serial2Blazor
                 ACK = "{\"Action\":\"" + settings.ACK + "\"}";
             ReadCommandsUrl = (settings.ReadCommandsController).Replace("Controller", "");
             SensorApi = (settings.SensorController).Replace("Controller", "");
-            IsDevice = settings.IsDevice;
-            CommandsIfIsDevice = settings.CommandsIfIsDevice;
+            IsRealDevice = settings.IsRealDevice;
+            CommandsIfIsSimDevice = settings.CommandsIfIsSimDevice;
             defaultTimeout = settings.defaultTimeout;
+            IOTHUB_DEVICE_CONN_STRING = settings.IOTHUB_DEVICE_CONN_STRING;
 
             Console.WriteLine("> \tHello IoT Nerd!");
             // Get a list of serial port names.
             string[] ports = SerialPort.GetPortNames();
             var lst = new List<string>(ports);
-            if (((!auto) || (!lst.Contains(comport))) && (!IsDevice))
+            if (((!auto) || (!lst.Contains(comport))) && (IsRealDevice))
             {
                 if (!lst.Contains(comport))
                     comport = "";
@@ -89,18 +98,28 @@ namespace Serial2Blazor
                 bool cont;
                 do
                 {
+                    Console.WriteLine("If USB is NOT inserted, insert now and enter x for the COM port in next.");
                     if (comport == "")
                         Console.Write($"> \tPort no: (No default) ");
                     else
                         Console.Write($"> \tPort no: (Default {comport}) ");
                     port = Console.ReadLine();
                     //Alllow for just the port number
-                    if (port.Length == 1)
-                        port = "COM" + port;
-                    cont = !lst.Contains(port);
-                    // Can just press return for defaults.
-                    if ((string.IsNullOrEmpty(port)) && (comport != ""))
-                        cont = false;
+                    if (!(port.ToLower() == "x"))
+                    {
+                        if (port.Length == 1)
+                            port = "COM" + port;
+                        cont = !lst.Contains(port);
+                        // Can just press return for defaults.
+                        if ((string.IsNullOrEmpty(port)) && (comport != ""))
+                            cont = false;
+                    }
+                    else
+                    {
+                        comport = settings.ComPort;
+                        ports = SerialPort.GetPortNames();
+                        cont = !lst.Contains(port);
+                    }
                 } while (cont);
                 if (!string.IsNullOrEmpty(port))
                     comport = port;
@@ -128,9 +147,12 @@ namespace Serial2Blazor
             }
             else
             {
-                if (IsDevice)
+                if (IsRealDevice)
                 {
-                    Console.WriteLine("> \tRemovce and reinsert the USB cable NOW ... then ...");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.BackgroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("> \tPlease remove and reinsert the USB cable NOW ... then ...");
+                    Console.ResetColor();
                     Console.WriteLine("> \tNb: It needs to be in at start.");
                 }
             }
@@ -142,7 +164,7 @@ namespace Serial2Blazor
 
             Console.Write("> \tPress [Enter] when web app is ready.");
             Console.ReadLine();
-            if (!IsDevice)
+            if (IsRealDevice)
             {
                 _serialPort = new SerialPort(comport, baudrate);
                 // Set the read/write timeouts
@@ -163,14 +185,14 @@ namespace Serial2Blazor
             }
 
             bool ready = true;
-            if (!IsDevice)
+            if (IsRealDevice)
             {
                 ready = _serialPort.IsOpen;
             }
 
             if (ready)
             {
-                if (!IsDevice)
+                if (IsRealDevice)
                     Console.WriteLine("> \tOpened the Serial Port {0}.", comport);
                 else
                     Console.WriteLine("> \tRunning app as device simulator.");
@@ -184,18 +206,19 @@ namespace Serial2Blazor
                 Console.WriteLine("> \thttps:////docs.microsoft.com//en-us//azure//iot-fundamentals//howto-use-iot-explorer");
                 Console.WriteLine();
                 bool cont = true;
-                if (!IsDevice)
+                if (IsRealDevice)
                 {
                     IsFirstSerialRead = true;
-                    _serialPort.WriteLine("RESET");
+
                 }
+                FirstRecv = true;
                 while (cont)
                 {
-                    if (!IsDevice)
+                    if (IsRealDevice)
                     {
-                        Task t3 = Task.Run(() => Signal());
+                        //Task t3 = Task.Run(() => Signal());
                         Task t4 = Task.Run(() => Read());
-                        t3.Wait();
+                        //t3.Wait();
                         t4.Wait();
                     }
                     else
@@ -214,13 +237,13 @@ namespace Serial2Blazor
 
         public static async Task Signal()
         {
-            while ((IsFirstSerialRead) && (!IsDevice))
+            while ((IsFirstSerialRead) && (!IsRealDevice))
             {
                 Thread.Sleep(1000);
             }
             while (true)
             {
-                if ((isFirstRead) && (!IsDevice))
+                if ((isFirstRead) && (!IsRealDevice))
                 {
                     isFirstRead = false;
                     if (auto)
@@ -237,10 +260,10 @@ namespace Serial2Blazor
                     //var response = await client.GetAsync("Sensor");
                     //cmd = await response.Content.ReadAsStringAsync();
                     Command _command = await client.GetFromJsonAsync<Command>(ReadCommandsUrl, null);  //.GetJsonAsync<Command>("Sensor")
-                    if (IsDevice && isFirstRead)
+                    if (!IsRealDevice && isFirstRead)
                     {
                         isFirstRead = false;
-                        await SendCommands($"{CommandsIfIsDevice}");
+                        await SendCommands($"{CommandsIfIsSimDevice}");
                     }
                     cmd = JsonConvert.SerializeObject(_command);
                     string cd = _command.Action;
@@ -253,33 +276,49 @@ namespace Serial2Blazor
                             cd = cd.Trim();
                             if (cd != "")
                             {
-                                if (!IsDevice)
+                                if (IsRealDevice)
                                 {
                                     //Forward serially
+
                                     Monitor.Enter(_serialPort);
                                     _serialPort.WriteLine(cmd);
-                                    if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
-                                        Console.WriteLine("> \tCommand sent: {0} Parameter: {1}", _command.Action, _command.Parameter);
-                                    else
-                                        Console.WriteLine("> \tCommand sent: {0}  No parameter.", _command.Action);
                                     Monitor.Exit(_serialPort);
+
+
+                                    if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Green;
+                                        Console.WriteLine("\n> \tCommand sent: {0} Parameter: {1}.\n", _command.Action, _command.Parameter);
+                                        Console.ForegroundColor = ConsoleColor.White;
+                                    }
+                                    else
+                                    {
+                                        Console.ForegroundColor = ConsoleColor.Blue;
+                                        Console.WriteLine("\n> \tCommand sent: {0}  No parameter.\n", _command.Action);
+                                        Console.ForegroundColor = ConsoleColor.White;
+                                    }
+
                                 }
                                 else
                                 {
-                                    string[] cmds = CommandsIfIsDevice.Split(',');
+                                    string[] cmds = CommandsIfIsSimDevice.Split(',');
                                     if ((new List<string>(cmds)).Contains(_command.Action))
                                     {
                                         if ((_command.Parameter != null) && (_command.Parameter != Sensor.iNull))
                                         {
                                             InvokeMethod imv = new InvokeMethod();
                                             imv.Invoke(_command.Action, _command.Parameter);
+                                            Console.ForegroundColor = ConsoleColor.Green;
                                             Console.WriteLine($"Got command {_command.Action} with parameter {_command.Parameter}");
+                                            Console.ForegroundColor = ConsoleColor.White;
                                         }
                                         else
                                         {
                                             InvokeMethod imv = new InvokeMethod();
                                             imv.Invoke(_command.Action, null);
+                                            Console.ForegroundColor = ConsoleColor.Blue;
                                             Console.WriteLine($"Got command {_command.Action}");
+                                            Console.ForegroundColor = ConsoleColor.White;
                                         }
                                     }
                                    else
@@ -292,6 +331,10 @@ namespace Serial2Blazor
                         }
                     }
 
+                }
+                catch (TimeoutException )
+                {
+                    //Ignore these
                 }
                 catch (Exception ex)
                 {
@@ -473,9 +516,11 @@ namespace Serial2Blazor
         {
             // Device expects an initial char to complete SetUp()
             Monitor.Enter(_serialPort);
+            _serialPort.WriteLine("RESET");
+            Thread.Sleep(1000);
             _serialPort.Write("*");
             Monitor.Exit(_serialPort);
-            Thread.Sleep(1000);
+            //Thread.Sleep(1000);
             while (true)
             {
 
@@ -495,21 +540,26 @@ namespace Serial2Blazor
 
                     if (!string.IsNullOrEmpty(sensor))
                     {
-                        Console.WriteLine(sensor);
+                        Console.WriteLine("From device:  " + sensor);
                         if (IsFirstSerialRead)
                         {
                             IsFirstSerialRead = false;
                             continue;
                         }
+                        else if (sensor[0] == '~')
+                        {
+                            Thread.Sleep(100);
+                            continue;
+                        }
                         else if (sensor[0] == '#')
                         {
-                            string    comandsCsv = sensor.Substring(1).Trim();        
+                            string comandsCsv = sensor.Substring(1).Trim();
                             await SendCommands(comandsCsv);
                             // Make sure not sending a command when sending an ACK
-                            Monitor.Enter(_serialPort);
+                            // Monitor.Enter(_serialPort);
 
                             //_serialPort.Write(new char[] { ACK }, 0, 1);
-                            Monitor.Exit(_serialPort);
+                            //Monitor.Exit(_serialPort);
                         }
                         else if (sensor[0] == '*')
                         {
@@ -530,24 +580,34 @@ namespace Serial2Blazor
                     //An empty Serial.println(""); gets to here so is OK
                     //else Console.WriteLine("> Invalid Sensor Data.");
                 }
-                catch (TimeoutException) { }
+                catch (TimeoutException ex) {
+                    string msg = ex.Message;
+                    msg = "";
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Read() - " + ex.Message);
+                }
             }
         }
 
+
+        private static bool FirstRecv = true;
         public static async Task SendSensor(string sensorJson)
         {
             Sensor sensor = JsonConvert.DeserializeObject<Sensor>(sensorJson);
-
 
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
                 httpClient.BaseAddress = new Uri(_host);
                 // Note no "api/Sensor" but just "Sensor" in next LOC!:
+       
                 Console.Write("Sending ... ");
-
+                DateTime now = DateTime.Now;
                 var response = await httpClient.PostAsJsonAsync<Sensor>(SensorApi, sensor, null);
                 Console.Write(" Sent: ");
+           
                 if (response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Sent OK");
@@ -563,6 +623,11 @@ namespace Serial2Blazor
                                 break;
                             case "1":
                                 Console.Write("Done");
+                                if (FirstRecv)
+                                {
+                                    FirstRecv = false;
+                                    //await SendCommands($"{CommandsIfIsSimDevice}");
+                                }
                                 keepTrying = false;
                                 break;
                             case "-1":
@@ -575,7 +640,8 @@ namespace Serial2Blazor
                                 break;
                         }
                     }
-                    Console.WriteLine(" - {0}", DateTime.Now.TimeOfDay.Seconds);
+                    TimeSpan ts = DateTime.Now.Subtract(now);
+                    Console.WriteLine(" - {0} seconds", ts.TotalMilliseconds/1000);
                 }
                 else
                 {
@@ -585,8 +651,14 @@ namespace Serial2Blazor
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("SendSensor(): " + ex.Message);
             }
+        }
+
+
+        static async Task Cb (string Action, int value)
+        {
+            
         }
 
         public static async Task SendCommands(string commands)
@@ -598,27 +670,62 @@ namespace Serial2Blazor
             {
                 client.BaseAddress = new Uri(_host);
                 // Note no "api/Sensor" but just "Sensor" in next LOC!:
-                Console.Write("Sending Commands ... ");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.Write("\tSending Commands ... ");
                 List<string> cmds = new List<string>(commands.Split(','));
                 //DeviceCommands deviceCommands = new DeviceCommands { Id = "", Commands = cmds };
                 //var response = await client.PostAsync("CommansdsDirectFromHub/PostAddCommands", new StringContent(commands, Encoding.UTF8));
                 var response = await client.PostAsJsonAsync<List<string>>("CommansdsDirectFromHub", cmds, null);
                 Console.Write(" Sent: ");
 
+
                 if (response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("Sent OK");
+                    Console.WriteLine("Commands Sent OK");
+                    string[] args = new string[] { IOTHUB_DEVICE_CONN_STRING, commands };
+                    Client4Commands.Main(args, DoCommand).GetAwaiter();
                 }
                 else
                 {
+                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine();
                     Console.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
                 }
+                Console.ResetColor();
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("SendCommands(): " + ex.Message);
+                Console.ResetColor();
             }
+
+        }
+
+        static async Task DoCommand(string action, int value)
+        {
+            Command _command = new Command{ Action = action, Invoke = false, Parameter = value };
+            string cmd = JsonConvert.SerializeObject(_command);
+
+            //Forward serially
+
+            Monitor.Enter(_serialPort);
+            _serialPort.WriteLine(cmd);
+            Monitor.Exit(_serialPort);
+
+
+            if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\n> \tCommand sent: {0} Parameter: {1}.\n", _command.Action, _command.Parameter);
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine("\n> \tCommand sent: {0}  No parameter.\n", _command.Action);
+                Console.ForegroundColor = ConsoleColor.White;
+            }
+            await Task.Delay(1);
 
         }
     }
@@ -638,11 +745,13 @@ namespace Serial2Blazor
         public string ReadCommandsController { get; set; }
         public string SensorController { get; set; }
 
-        public bool IsDevice { get; set; }
+        public bool IsRealDevice { get; set; }
 
-        public string CommandsIfIsDevice { get; set; }
+        public string CommandsIfIsSimDevice { get; set; }
 
         public int defaultTimeout { get; set; }
+
+        public string IOTHUB_DEVICE_CONN_STRING { get; set; }
 
 
 

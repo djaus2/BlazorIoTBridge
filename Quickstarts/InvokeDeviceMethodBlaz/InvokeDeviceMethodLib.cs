@@ -32,12 +32,12 @@ namespace InvokeDeviceMethod
     /// <summary>
     /// This sample illustrates the very basics of a service app invoking a method on a device.
     /// </summary>
-    public class Program
+    public static class InvokeDeviceMethodLib
     {
-        private static ServiceClient s_serviceClient;
+        private static ServiceClient s_serviceClient = null;
 
         private static string command = "SetTelemetryInterval";
-        private static string payload = "10";
+        private static string payload = "null";
 
         // Connection string for your IoT Hub
         // az iot hub show-connection-string --hub-name PnPHub4 --policy-name service
@@ -49,15 +49,21 @@ namespace InvokeDeviceMethod
                 s_connectionString =  args[0];
             if (args.Length > 1)
                 command = args[1];
-            if (args.Length > 1)
+            if (args.Length > 2)
                 payload = args[2];
+            if (args.Length > 3)
+                payload = args[3];
 
             //s_connectionString = "HostName=PnPHub4.azure-devices.net;SharedAccessKeyName=service;SharedAccessKey=l6z5TzRQvJK+hVELXWhlbyWEBLuBX1VBi+SVC2t+LGI=";
 
-            System.Diagnostics.Debug.WriteLine("IoT Hub Quickstarts #2 - InvokeDeviceMethod application.");
+            System.Diagnostics.Debug.WriteLine("InvokeDeviceMethod creating: " + command);
 
             // Create a ServiceClient to communicate with service-facing endpoint on your hub.
-            s_serviceClient = ServiceClient.CreateFromConnectionString(s_connectionString);
+            if (s_serviceClient == null)
+            {
+                System.Diagnostics.Debug.WriteLine("InvokeDeviceMethod: Serviceclient starting.");
+                s_serviceClient = ServiceClient.CreateFromConnectionString(s_connectionString);
+            }
             try
             {
                 await InvokeMethodAsync();
@@ -65,9 +71,7 @@ namespace InvokeDeviceMethod
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message);
             }
-            finally{
-                s_serviceClient.Dispose();
-            }
+
             
         }
 

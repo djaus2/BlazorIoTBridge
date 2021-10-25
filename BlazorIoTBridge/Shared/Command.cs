@@ -12,4 +12,5 @@ namespace BlazorIoTBridge.Shared
         public int? Parameter { get; set; } = (int)Sensor.iNull; //Used to represent null
         public bool Invoke { get; set; } = false;
     }
+
 }

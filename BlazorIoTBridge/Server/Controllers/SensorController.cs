@@ -10,6 +10,9 @@ using Newtonsoft.Json;
 using System.Threading;
 using System.Collections.Concurrent;
 using Microsoft.Azure.Devices;
+using Microsoft.Extensions.Configuration;
+
+using BlazorIoTBridge.Server.Data;
 
 namespace BlazorIoTBridge.Server.Controllers
 {
@@ -26,17 +29,17 @@ namespace BlazorIoTBridge.Server.Controllers
 
         private static SimulatedDeviceCS _SimulatedDeviceCS;
 
-        private static int Count { get; set; } = 0;
+        private readonly IDataAccessService dataservice;
 
 
-
-        public SensorController(AppSettings _appsettings)
+        public SensorController(AppSettings _appsettings, IDataAccessService _dataservice)
         {
             this.appsettings = _appsettings;
+            this.dataservice = _dataservice;
 
             if (_SimulatedDeviceCS == null)
             {
-                Status = 1;
+                dataservice.SetStatus(1);
                 _SimulatedDeviceCS = new SimulatedDeviceCS(appsettings.IOTHUB_DEVICE_CONN_STRING);
             }
         }
@@ -46,33 +49,12 @@ namespace BlazorIoTBridge.Server.Controllers
             _SimulatedDeviceCS = null;
         }
 
-        static int status { get; set; }
 
-        private static object meltdownLock = new object();
-        private static bool _meltdownIsHappening;
-        public static int Status
-        {
-            get
-            {
-                int stat;
-                Monitor.Enter(meltdownLock);
-                stat = status;
-                Monitor.Exit(meltdownLock);
-                return stat;
-            }
-            set
-            {
-                Monitor.Enter(meltdownLock);
-                status = value;
-                Monitor.Exit(meltdownLock);
-            }
-        }
 
         [HttpGet]
         public IActionResult Get()
         {
-            int status;
-            status = Status;
+            int status = dataservice.GetStatus();
             return Ok(status);
         }
 
@@ -93,49 +75,33 @@ namespace BlazorIoTBridge.Server.Controllers
                 switch (state)
                 {
                     case 1:
-                        PostedTelemetryLogController.PostLog = new List<Sensor>();
+                        dataservice.Reset(true);
                         break;
                 }
-                return Ok(Count);
+                return Ok(dataservice.GetStatus());
             }
             else
             {
                 try
                 {
-                    //json = "{\"No\":5,\"Id\":\"Sensor5\",\"SensorType\":5,\"Values\":[19.04,56.16,101897.00]}";
-
                     sensor = JsonConvert.DeserializeObject<Sensor>(json);
                     sensor.TimeStamp = DateTime.Now.Ticks;
-                    //if (sensor != null)
-                    //{
-                    //    if (!SimulatedDevice.KeepRunning)
-                    //        await SimulatedDevice.StartMessageSending();
-                    while (status == 0) ;
-                    Status = 0;
-                    bool res = await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //
+;
+                    while (dataservice.GetStatus() == 0) ;
+                    dataservice.SetStatus(0);
+                    bool res = await SimulatedDevicewithCommands.Client4Commands.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //SimulatedDevicewithCommands
+                    //bool res = await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //SimulatedDevicewithCommands
                     if (res)
-                        Status = 1;
+                        dataservice.SetStatus(1);
                     else
-                        Status = -1;
-
-
-                    if (PostedTelemetryLogController.PostLog == null)
-                    {
-                        Count = 0;
-                        PostedTelemetryLogController.PostLog = new List<Sensor>();
-                    }
-                    PostedTelemetryLogController.PostLog.Add(sensor);
-                    //await Task.Delay(1000);
-                    Count++;
-                    return Ok(Count);
-                    //}
-                    //else
-                    //    return BadRequest();
+                        dataservice.SetStatus(-1);
+                    int count = dataservice.LogSensor(sensor);
+                    return Ok(count);
                 }
                 catch (Exception)
                 {
-                    Status = -2;
-                    return BadRequest(Status);
+                    dataservice.SetStatus(-2);
+                    return BadRequest(dataservice.GetStatus());
                 }
             }
         }
