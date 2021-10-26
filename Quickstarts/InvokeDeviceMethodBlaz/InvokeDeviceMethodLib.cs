@@ -43,7 +43,7 @@ namespace InvokeDeviceMethod
         // az iot hub show-connection-string --hub-name PnPHub4 --policy-name service
         private static string s_connectionString = "{Your service connection string here}";
 
-        public static async Task Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
             if (args.Length > 0)
                 s_connectionString =  args[0];
@@ -64,19 +64,22 @@ namespace InvokeDeviceMethod
                 System.Diagnostics.Debug.WriteLine("InvokeDeviceMethod: Serviceclient starting.");
                 s_serviceClient = ServiceClient.CreateFromConnectionString(s_connectionString);
             }
+            int result = -1;
             try
             {
-                await InvokeMethodAsync();
+                result =  await InvokeMethodAsync();
             } catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message);
+                if (ex.Message.Contains("404"))
+                    result = 404;
             }
 
-            
+            return result;
         }
 
         // Invoke the direct method on the device, passing the payload
-        private static async Task InvokeMethodAsync()
+        private static async Task<int> InvokeMethodAsync()
         {
             var methodInvocation = new CloudToDeviceMethod(command)
             {
@@ -88,6 +91,7 @@ namespace InvokeDeviceMethod
             var response = await s_serviceClient.InvokeDeviceMethodAsync("PnPDev4", methodInvocation);
 
             System.Diagnostics.Debug.WriteLine($"\nResponse status: {response.Status}, payload:\n\t{response.GetPayloadAsJson()}");
+            return response.Status;
         }
 
     }

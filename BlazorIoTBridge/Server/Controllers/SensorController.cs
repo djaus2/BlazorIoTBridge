@@ -89,8 +89,8 @@ namespace BlazorIoTBridge.Server.Controllers
 ;
                     while (dataservice.GetStatus() == 0) ;
                     dataservice.SetStatus(0);
-                    bool res = await SimulatedDevicewithCommands.Client4Commands.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //SimulatedDevicewithCommands
-                    //bool res = await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //SimulatedDevicewithCommands
+                    //bool res = await SimulatedDevicewithCommands.Client4Commands.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //SimulatedDevicewithCommands
+                    bool res = await _SimulatedDeviceCS.StartSendDeviceToCloudMessageAsync(sensor);//SendDeviceToCloudMessagesAsync(); //SimulatedDevicewithCommands
                     if (res)
                         dataservice.SetStatus(1);
                     else

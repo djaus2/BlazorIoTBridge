@@ -102,3 +102,55 @@ table.t1 {
 .t1 tr *:nth-child(3), .t1 tr *:nth-child(4) {
     text-align: right;
 }
+
+table.t2 {
+    margin: 1em auto;
+    border-collapse: collapse;
+    font-family: Arial, Helvetica, sans-serif;
+    width: 100%;
+}
+
+.t2 th, .t2 td {
+    padding: 4px 8px;
+}
+
+.t2 thead th {
+    background: #ff86C1ff;
+    text-transform: lowercase;
+    text-align: left;
+    font-size: 15px;
+    color: #fff;
+}
+
+.t2 tr {
+    border-right: 1px solid #95b3d7;
+}
+
+.t2 tbody tr {
+    border-bottom: 1px solid #95b3d7;
+}
+
+.t2 tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+
+.t2 tbody tr:nth-child(odd) {
+    background: #dbe5f0;
+}
+
+.t2 tbody th, .t1 tbody tr:nth-child(even) td {
+    border-right: 1px solid #95b3d7;
+}
+
+.t2 tfoot th {
+    background: #4f81bd;
+    text-align: left;
+    font-weight: normal;
+    font-size: 10px;
+    color: #fff;
+}
+
+.t2 tr *:nth-child(3), .t1 tr *:nth-child(4) {
+    text-align: right;
+}

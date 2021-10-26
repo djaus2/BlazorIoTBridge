@@ -2,6 +2,7 @@
 
 @using BlazorIoTBridge.Shared
 @inject HttpClient client
+@inject IJSRuntime JSRuntime
 
 <h1>Invoke Commands on Device via the Hub</h1>
 
@@ -25,12 +26,7 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
                         @foreach (var cmd in RegCmdz)
                         {
                             <option value=@cmd><b>@cmd</b></option>
-                        }
-                        <option value=""> </option>
-                        @foreach (var misc in MiscCommands)
-                        {
-                            <option value=@misc><i>@misc</i></option>
-                        }                      
+                        }                  
 
                     </select>
                 }
@@ -47,9 +43,9 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
 <tabls>
     <tr>
         <td>
-        @if (commandsLogged != null) 
+        @if (commands != null) 
             {
-                @if (commandsLogged.Count() != 0)
+                @if (commands.Count() != 0)
                 {
                     <h3>Log of Commands Queue direct to Device</h3>
                     <table class="t1">
@@ -57,7 +53,7 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
                         <th>Action</th>
                         <th>Parameter</th>
                         </tr>
-                    @foreach (var @cmd in commandsLogged)
+                    @foreach (var @cmd in commands)
                     {
                          <tr>
                              <td>@cmd.Action</td>
@@ -75,44 +71,14 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
                 }
             }         
         </td>
-        <td>
-            @if (commandsWaiting != null) 
-            {
-                @if (commandsWaiting.Count() != 0)
-                {
-                    <h3>Commands Queue direct to Device</h3>
-                    <table class="t1">
-                        <tr>
-                        <th>Action</th>
-                        <th>Parameter</th>
-                        </tr>
-                    @foreach (var @cmd in @commandsWaiting)
-                    {
-                         <tr>
-                             <td>@cmd.Action</td>
-                                @if (cmd.Parameter != iNull )
-                                {
-                                    <td>@cmd.Parameter</td>
-                                }
-                                else
-                                {
-                                    <td>&nbsp;</td>
-                                }
-                        </tr>
-                    }
-                    </table>
-                }
-            }
-
-        </td>
     </tr>
 </tabls>
 
 
 @code {
 
-    private string MiscCommandsCsvString = "STOPLISTENING,STARTLISTENING,LISTCOMMANDS";
-    private List<string> MiscCommands = null;
+    //private string MiscCommandsCsvString = "STOPLISTENING,STARTLISTENING,LISTCOMMANDS";
+    //private List<string> MiscCommands = null;
     private int currentCount = 0;
     private string command { get; set; } = "";
     private string value { get; set; } = "10";
@@ -121,11 +87,11 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
     private bool showmenu = true;
 
     System.Threading.Timer timer;
-    List<Command> commandsLogged = null;
+    List<Command> commands = null;
     List<Command> commandsWaiting = null;
 
     int iNull = (int)BlazorIoTBridge.Shared.Sensor.iNull;
-    string RegisteredCommandsCsvString;
+    string RegisteredCommands;
     List<string> RegCmdz = null;
 
     public async Task Enter(KeyboardEventArgs e)
@@ -157,32 +123,89 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
         BlazorIoTBridge.Shared.Command cmd;
 
         int val;
- 
-        if (!int.TryParse(value, out val))
-            cmd = new BlazorIoTBridge.Shared.Command { Action = command };
-        else
-            cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
 
-        cmd.Invoke = true;
-        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommansdsDirectFromHub", cmd,null);
-        command = "";
-        value = "";
-        cmd = null;
-        string content = await response.Content.ReadAsStringAsync();
-        if (response.IsSuccessStatusCode)
+        if (command[0] == '*')
         {
-            System.Diagnostics.Debug.WriteLine("Sent OK");
-            Response = $"Sent Ok<br/>{content}";
+            //Commands that require a parameter have a leading * in name.
+            if (int.TryParse(value, out val))
+                cmd = new BlazorIoTBridge.Shared.Command { Action = command.Substring(1), Parameter = val };
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", new string[] { "Command requires a parameter" });
+                cmd = null;
+            }
         }
         else
-        {
-            System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
-            Response = $"Not OK: {response.StatusCode} {response.ReasonPhrase}";
-            Response += $"<br/>{content}";
+        {         
+            // Some commands have an optional parameter 
+            if (int.TryParse(value, out val))
+                cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
+            else
+                cmd = new BlazorIoTBridge.Shared.Command { Action = command };
         }
-        await GetCommands();
+        if (cmd != null)
+        {
+
+            cmd.Invoke = true;
+            bool notDone = true;
+            int count = 1;
+            Response = $"Sending {cmd.Action} ... ";
+            int numTries = 5;
+            int delay = 2000;
+            StateHasChanged();
+            do
+            {
+                var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommandsViaHub", cmd, null);
+                command = "";
+                value = "";
+
+                string content = await response.Content.ReadAsStringAsync();
+                if (response.IsSuccessStatusCode)
+                {
+                    if (count == 1)
+                    {
+                        System.Diagnostics.Debug.WriteLine("Sent Command OK");
+                        Response += $"Sent Command Ok<br/>";
+                    }
+                    else
+                    {                 
+                        System.Diagnostics.Debug.WriteLine("$Sent Command OK. Took {count -1} retries.");
+                        Response += "$Sent Command OK. Took {count -1} retries.<br/>";
+                    }
+                    notDone = false;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("Not OK: {0} {1}", (int)response.StatusCode, response.ReasonPhrase);
+                    Response += $"<br/>Command Not OK: {(int)response.StatusCode} {response.ReasonPhrase}";
+                    Response += $"<br/>{content}";
+                    
+                    notDone = true;
+                    if (count < numTries)
+                    {
+                        Response += $"<br>Trying again in {delay} mS. Try {count}/{numTries}";
+                        System.Diagnostics.Debug.WriteLine($"Trying again in {delay} mS. Try {count}/{numTries}");
+                    }
+                    else
+                    {
+                        Response += "<br/>No more tries.";
+                        System.Diagnostics.Debug.WriteLine("No more tries.");
+                    }
+                    StateHasChanged();
+                    count++;
+                    delay += 1000;
+                    System.Threading.Thread.Sleep(delay);
+                }
+                StateHasChanged();
+            } while (notDone && (count <= numTries ));
+        }
+        cmd = null;
+        Command[] bak = commands.ToArray();
+        commands = null;
         showmenu = false;
         StateHasChanged();
+        commands = new List<Command>();
+        commands.AddRange(bak);
         showmenu = true;
         StateHasChanged();
     }
@@ -209,55 +232,28 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
         await GetRegisteredCommands();
         Response = "";
         startTimer(1);
-        commandsLogged = new List<Command>();
+        commands = new List<Command>();
         commandsWaiting = new List<Command>();
     }
 
         
+
     private async Task GetCommands()
     {
-        List<Command> kmds;
         var response = await client.GetFromJsonAsync<Command[]>("CommansdsDirectFromHub");
         if (response != null)
-        {
-            kmds = response.ToList();
-            if (kmds.Count() != 0)
-            {
-                kmds.AddRange(commandsLogged);
-                commandsLogged = kmds;
-            }
-        }
-        //await GetCommandsWaiting();
-    }
-
-    private async Task GetCommandsWaiting()
-    {
-        var response = await client.GetFromJsonAsync<Command[]>("CommansdsDirectFromHub/Get2");
-        if (response != null)
-        {
-            commandsWaiting = response.ToList();
-        }
+            commands = response.ToList();
         else
-            commandsWaiting = new List<Command>();
+            commands = null;
     }
-
-@*    private async Task GetRegisteredCommands()
-    {
-        BlazorIoTBridge.Shared.Command cmd = new BlazorIoTBridge.Shared.Command { Action = "LISTCOMMANDS" , Invoke = true};
-        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommansdsDirectFromHub", cmd,null);
-        RegisteredCommands = await response.Content.ReadAsStringAsync();
-        RegisteredCommands = "Select," + RegisteredCommands  + ",,STARTLISTENING,STOPLISTENING,LISTCOMMANDS";
-        RegCmdz = RegisteredCommands.Split(',').ToList<string>();
-    }*@
-
+  
     private async Task GetRegisteredCommands()
     {
         RegCmdz=null;
         BlazorIoTBridge.Shared.Command cmd = new BlazorIoTBridge.Shared.Command { Action = "LISTCOMMANDS" , Invoke = true};
-        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommansdsDirectFromHub", cmd,null);
-        RegisteredCommandsCsvString = await response.Content.ReadAsStringAsync();
-        RegCmdz = RegisteredCommandsCsvString.Split(',').ToList<string>();
-        MiscCommands = MiscCommandsCsvString.Split(',').ToList<string>();
+        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommandsViaHub", cmd,null);
+        RegisteredCommands = await response.Content.ReadAsStringAsync();
+        RegCmdz = RegisteredCommands.Split(',').ToList<string>();
         StateHasChanged();
     }
 

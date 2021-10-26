@@ -199,7 +199,7 @@ namespace SimulatedDeviceWithDefaultCommandOnly
             }
         }
 
-        private static Sensor.CommandCallback CallBack;
+        private static Sensor.CommandCallback CallBack = null;
 
         private static async Task<MethodResponse> DefaultCommandfromHubHandler(MethodRequest methodRequest, object userContext)
         {
@@ -209,13 +209,70 @@ namespace SimulatedDeviceWithDefaultCommandOnly
                 if (RegCmdz.Contains(methodRequest.Name))
                 {
                     if (CallBack != null)
-                        await CallBack.Invoke(methodRequest.Name, -1);
-                    //Task t3 = Task.Run(() => SetCommand(methodRequest.Name));
-                    return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(cmd1), 200));
+                    {
+                        if (methodRequest.Data != null)
+                        {
+                            string data = Encoding.UTF8.GetString(methodRequest.Data);
+                            if (
+                                (!string.IsNullOrEmpty(data)) &&
+                                (data != "null") &&
+                                (data != "-2147483648") &&
+                                (int.TryParse(data, out int param))
+                                )
+                                {
+                                    await CallBack.Invoke(methodRequest.Name, param);
+
+                                }
+                            else
+                                await CallBack.Invoke(methodRequest.Name, -2147483648);
+                        }
+                        else
+                            await CallBack.Invoke(methodRequest.Name, -2147483648);
+                        return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(cmd1), 200));
+                    }
+                    string result = "{\"result\":\"CallBack not assigned - {" + methodRequest.Name + "}\"}";
+                    System.Diagnostics.Debug.WriteLine("\t\t\t" + result);
+                    return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(result), 501));
+                }
+                else if (RegCmdz.Contains("*" + methodRequest.Name))
+                {
+                    if (CallBack != null)
+                    {
+                        if (methodRequest.Data != null)
+                        {
+                            string data = Encoding.UTF8.GetString(methodRequest.Data);
+                            if (
+                                (!string.IsNullOrEmpty(data)) &&
+                                (data != "null") &&
+                                (data != "-2147483648") &&
+                                (int.TryParse(data, out int param))
+                                )
+                            {
+                                await CallBack.Invoke("*" + methodRequest.Name, param);
+
+                            }
+                            else
+                            {
+                                string result1 = "{\"result\":\"Parameter required- { (*)" + methodRequest.Name + "}\"}";
+                                System.Diagnostics.Debug.WriteLine("\t\t\t" + result1);
+                                return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(result1), 501)); ;
+                            }
+                        }
+                        else
+                        {
+                            string result2 = "{\"result\":\"Parameter required - {" + methodRequest.Name + "}\"}";
+                            System.Diagnostics.Debug.WriteLine("\t\t\t" + result2);
+                            return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(result2), 501));
+                        }
+                        return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(cmd1), 200));
+                    }
+                    string result = "{\"result\":\"CallBack not assigned - {" + methodRequest.Name + "}\"}";
+                    System.Diagnostics.Debug.WriteLine("\t\t\t" + result);
+                    return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(result), 501));
                 }
                 else
                 {
-                    string result = "{\"result\":\"Command callback not found - {" + methodRequest.Name + "}\"}";
+                    string result = "{\"result\":\"Command not implemented - {" + methodRequest.Name + "}\"}";
                     System.Diagnostics.Debug.WriteLine("\t\t\t" + result);
                     return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(result), 501));
                 }

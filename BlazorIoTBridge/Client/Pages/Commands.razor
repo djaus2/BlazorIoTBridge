@@ -1,6 +1,7 @@
 ﻿@page "/commands"
 @using BlazorIoTBridge.Shared
 @inject HttpClient client
+@inject IJSRuntime JSRuntime
 
 <h1>Commands</h1>
 <table>
@@ -134,36 +135,57 @@ public async Task Enter(KeyboardEventArgs e)
         Response = "Busy";
         int val;
         BlazorIoTBridge.Shared.Command cmd;
-        if (!int.TryParse(value, out val))
-            cmd = new BlazorIoTBridge.Shared.Command { Action = command };
-        else
-            cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
-        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("Commands2Device", cmd,null);
-        command = "";
-        value = "";
-        cmd = null;
-        string content = await response.Content.ReadAsStringAsync();
-        if (response.IsSuccessStatusCode)
+        if (command[0] == '*')
         {
-            System.Diagnostics.Debug.WriteLine("Sent OK");
-            Response = $"Sent Ok<br/>{content}";
+            //Commands that require a parameter have a leading * in name.
+            if (int.TryParse(value, out val))
+                cmd = new BlazorIoTBridge.Shared.Command { Action = command.Substring(1), Parameter = val };
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("alert", new string[] { "Command requires a parameter" });
+                cmd = null;
+            }
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine("Not OK: {0}",response.ReasonPhrase);
-            Response = $"Not OK: {response.ReasonPhrase}";
-            Response += $"<br/>{content}";
+            // Some commands have an optional parameter 
+            if (int.TryParse(value, out val))
+                cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
+            else
+                cmd = new BlazorIoTBridge.Shared.Command { Action = command };
         }
-        await GetCommands();
+		if (cmd != null)	
+        {
+            var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("Commands2Device", cmd, null);
+            command = "";
+            value = "";
+            cmd = null;
+            string content = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                System.Diagnostics.Debug.WriteLine("Sent OK");
+                Response = $"Sent Ok<br/>{content}";
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("Not OK: {0}", response.ReasonPhrase);
+                Response = $"Not OK: {response.ReasonPhrase}";
+                Response += $"<br/>{content}";
+            }
+        }
+        Command[] bak = commands.ToArray();
+        commands = null;
         showmenu = false;
         StateHasChanged();
+        commands = new List<Command>();
+        commands.AddRange(bak);
         showmenu = true;
         StateHasChanged();
     }
 
     private async Task GetCommands()
     {
-        var response = await client.GetFromJsonAsync<Command[]>("CommansdsDirectFromHub");
+        var response = await client.GetFromJsonAsync<Command[]>("CommandsViaHub");
         if (response != null)
             commands = response.ToList();
         else
@@ -174,7 +196,7 @@ public async Task Enter(KeyboardEventArgs e)
     {
         RegCmdz=null;
         BlazorIoTBridge.Shared.Command cmd = new BlazorIoTBridge.Shared.Command { Action = "LISTCOMMANDS" , Invoke = true};
-        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommansdsDirectFromHub", cmd,null);
+        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommandsViaHub", cmd,null);
         RegisteredCommands = await response.Content.ReadAsStringAsync();
         RegCmdz = RegisteredCommands.Split(',').ToList<string>();
         StateHasChanged();

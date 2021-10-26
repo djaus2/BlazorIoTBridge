@@ -9,16 +9,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Schema\abc.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="Schema\abc.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.38.0" />
   </ItemGroup>
 
@@ -37,7 +27,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Quickstarts\InvokeDeviceMethodBlaz\InvokeDeviceMethod_lib.csproj" />
-    <ProjectReference Include="..\..\Quickstarts\SimulatedDeviceWithCommandOnlyBlaz\SimulatedDeviceWithCommand_lib.csproj" />
     <ProjectReference Include="..\Client\BlazorIoTBridge.Client.csproj" />
     <ProjectReference Include="..\Shared\BlazorIoTBridge.Shared.csproj" />
   </ItemGroup>

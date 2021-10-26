@@ -216,9 +216,9 @@ namespace Serial2Blazor
                 {
                     if (IsRealDevice)
                     {
-                        //Task t3 = Task.Run(() => Signal());
+                        Task t3 = Task.Run(() => Signal());
                         Task t4 = Task.Run(() => Read());
-                        //t3.Wait();
+                        t3.Wait();
                         t4.Wait();
                     }
                     else
@@ -279,25 +279,7 @@ namespace Serial2Blazor
                                 if (IsRealDevice)
                                 {
                                     //Forward serially
-
-                                    Monitor.Enter(_serialPort);
-                                    _serialPort.WriteLine(cmd);
-                                    Monitor.Exit(_serialPort);
-
-
-                                    if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
-                                    {
-                                        Console.ForegroundColor = ConsoleColor.Green;
-                                        Console.WriteLine("\n> \tCommand sent: {0} Parameter: {1}.\n", _command.Action, _command.Parameter);
-                                        Console.ForegroundColor = ConsoleColor.White;
-                                    }
-                                    else
-                                    {
-                                        Console.ForegroundColor = ConsoleColor.Blue;
-                                        Console.WriteLine("\n> \tCommand sent: {0}  No parameter.\n", _command.Action);
-                                        Console.ForegroundColor = ConsoleColor.White;
-                                    }
-
+                                    await DoCommand(_command.Action, (int)_command.Parameter);
                                 }
                                 else
                                 {
@@ -575,7 +557,10 @@ namespace Serial2Blazor
                             Monitor.Exit(_serialPort);
                         }
 
-                        else Console.WriteLine("> \tInvalid Sensor Data: " + sensor);
+                        else
+                        {
+                            Console.WriteLine("> \tInvalid Sensor Data: " + sensor);
+                        }
                     }
                     //An empty Serial.println(""); gets to here so is OK
                     //else Console.WriteLine("> Invalid Sensor Data.");
@@ -605,49 +590,55 @@ namespace Serial2Blazor
        
                 Console.Write("Sending ... ");
                 DateTime now = DateTime.Now;
-                var response = await httpClient.PostAsJsonAsync<Sensor>(SensorApi, sensor, null);
-                Console.Write(" Sent: ");
+                //var response = await httpClient.PostAsJsonAsync<Sensor>(SensorApi, sensor, null);
+                Console.WriteLine("Commands Sent OK");
+                //string[] args = new string[] { IOTHUB_DEVICE_CONN_STRING, commands };
+                bool res = await Client4Commands.StartSendDeviceToCloudMessageAsync(sensor);
+                if (res)
+                    Console.Write(" Sent: ");
+                else
+                    Console.WriteLine(" Not sent.");
            
-                if (response.IsSuccessStatusCode)
-                {
-                    Console.WriteLine("Sent OK");
-                    bool keepTrying = true;
-                    while (keepTrying)
-                    {
-                        var responseGet = await httpClient.GetAsync(SensorApi);
-                        string resp = await responseGet.Content.ReadAsStringAsync();
-                        switch (resp)
-                        {
-                            case "0":
-                                Console.Write("Trying");
-                                break;
-                            case "1":
-                                Console.Write("Done");
-                                if (FirstRecv)
-                                {
-                                    FirstRecv = false;
-                                    //await SendCommands($"{CommandsIfIsSimDevice}");
-                                }
-                                keepTrying = false;
-                                break;
-                            case "-1":
-                                keepTrying = false;
-                                Console.Write("There was a a problem with the transmission.");
-                                break;
-                            case "-2":
-                                keepTrying = false;
-                                Console.Write("There was a service error.");
-                                break;
-                        }
-                    }
+                //if (response.IsSuccessStatusCode)
+                //{
+                //    Console.WriteLine("Sent OK");
+                //    bool keepTrying = true;
+                //    while (keepTrying)
+                //    {
+                //        var responseGet = await httpClient.GetAsync(SensorApi);
+                //        string resp = await responseGet.Content.ReadAsStringAsync();
+                //        switch (resp)
+                //        {
+                //            case "0":
+                //                Console.Write("Trying");
+                //                break;
+                //            case "1":
+                //                Console.Write("Done");
+                //                if (FirstRecv)
+                //                {
+                //                    FirstRecv = false;
+                //                    //await SendCommands($"{CommandsIfIsSimDevice}");
+                //                }
+                //                keepTrying = false;
+                //                break;
+                //            case "-1":
+                //                keepTrying = false;
+                //                Console.Write("There was a a problem with the transmission.");
+                //                break;
+                //            case "-2":
+                //                keepTrying = false;
+                //                Console.Write("There was a service error.");
+                //                break;
+                //        }
+                //    }
                     TimeSpan ts = DateTime.Now.Subtract(now);
                     Console.WriteLine(" - {0} seconds", ts.TotalMilliseconds/1000);
-                }
-                else
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
-                }
+                //}
+                //else
+                //{
+                //    Console.WriteLine();
+                //    //Console.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+                //}
             }
             catch (Exception ex)
             {
@@ -656,10 +647,6 @@ namespace Serial2Blazor
         }
 
 
-        static async Task Cb (string Action, int value)
-        {
-            
-        }
 
         public static async Task SendCommands(string commands)
         {
@@ -675,7 +662,7 @@ namespace Serial2Blazor
                 List<string> cmds = new List<string>(commands.Split(','));
                 //DeviceCommands deviceCommands = new DeviceCommands { Id = "", Commands = cmds };
                 //var response = await client.PostAsync("CommansdsDirectFromHub/PostAddCommands", new StringContent(commands, Encoding.UTF8));
-                var response = await client.PostAsJsonAsync<List<string>>("CommansdsDirectFromHub", cmds, null);
+                var response = await client.PostAsJsonAsync<List<string>>("CommandsViaHub", cmds, null);
                 Console.Write(" Sent: ");
 
 

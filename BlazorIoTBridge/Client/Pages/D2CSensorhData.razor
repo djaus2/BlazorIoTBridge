@@ -9,16 +9,16 @@
 
 <p>This component demonstrates fetching IoT D2C data from the IoT device via the server.</p>
 
-@if (messagesJson == null)
+@*@if (LogMsgs == null)
 {
     <p><em>Loading...</em></p>
 }
 else
-{
+{*@
     <table class="t1" >
-    @LogMsg
+        @LogMsg
     </table>
-}
+@*}*@
 
 
 
@@ -30,6 +30,8 @@ else
   
     MarkupString  LogMsg = new MarkupString();
 
+    List<TelemetryMsg> LogMsgs = new List<TelemetryMsg>();
+
     protected override async Task OnInitializedAsync()
     {
 
@@ -40,7 +42,7 @@ else
     {
        /* string Result = "Busy";
         var result = await Http.PostAsJsonAsync<int>("sensor", 1);
-       // Log(String.Format(result.StatusCode);
+       // Log(telemetryMsg,String.Format(result.StatusCode);
         Result = result.StatusCode.ToString();
         await Refresh();*/
     }
@@ -48,6 +50,7 @@ else
 
     private async Task Refresh()
     {
+        List<TelemetryMsg> LogMsgs = new List<TelemetryMsg>();
         messagesJson = null;
         LogMsg = new MarkupString();
         msgraw = "";
@@ -57,6 +60,8 @@ else
         messagesJson = new List< string> ( data );
         foreach (var json in messagesJson)
         {
+            TelemetryMsg telemetryMsg = new();
+            Int64 TimeStamp = 0;
                 //System.Dynamic.ExpandoObject}	dd =  {System.Dynamic.ExpandoObject} msg;
             dynamic message = JsonConvert.DeserializeObject<ExpandoObject>(json, new ExpandoObjectConverter());
                 //long ts = message.TimeStamp;
@@ -64,7 +69,22 @@ else
                 {
                     //lastTS = ts;;
 
-                    Logg("<h3><i><font color='blue'>Telemetry</font></i></h2>");
+
+                    foreach (var property in (IDictionary<String, Object>)message) 
+                    {
+                        if (!(property.Key == "TimeStamp"))
+                            continue;
+                        if (property.Value != null)
+                        {
+                            if (property.Value.GetType().Name == "Int64")
+                            {
+                                telemetryMsg.TimeStamp = (Int64)property.Value;
+                                break;
+                            }
+                        }
+
+                    }
+                    Logg(telemetryMsg,"<h3><i><font color='red'>Telemetry</font></i></h2>");
                     foreach (var property in (IDictionary<String, Object>)message)
                     {
                         if (property.Value != null)
@@ -80,16 +100,16 @@ else
                                     {
                                         if (isNullOrEmpty)
                                         {
-                                            Log( property.Key, " ... has properties:", property.Value.GetType());
+                                            Log(telemetryMsg, property.Key, " ... has properties:", property.Value.GetType());
                                             isNullOrEmpty = false;
                                         }
-                                        Log("",string.Format("{0,18} : {1,-19}",propertyExpando.Key, propertyExpando.Value), propertyExpando.Value.GetType());
+                                        Log(telemetryMsg,"",string.Format("{0,18} : {1,-19}",propertyExpando.Key, propertyExpando.Value), propertyExpando.Value.GetType());
                                     }
                                     if (isNullOrEmpty)
-                                        Log (property.Key, " ... has no properties", property.Value.GetType());
+                                        Log (telemetryMsg,property.Key, " ... has no properties", property.Value.GetType());
                                 }
                                 else
-                                    Log( property.Key, " ...is null", property.Value.GetType());
+                                    Log(telemetryMsg, property.Key, " ...is null", property.Value.GetType());
 
                             }
                             else if (property.Value.GetType().Name == "List`1") // i.e. System.Collections.Generic.List<T> where T is a simple Value Type ??
@@ -100,67 +120,67 @@ else
                                     string listType = values[0].GetType().FullName;
                                     if (listType == 24.3D.GetType().FullName)
                                     {
-                                        Log(property.Key," ... is List of double:");
+                                        Log(telemetryMsg,property.Key," ... is List of double:");
                                         foreach (var x in values)
                                         {
                                             double xx = (double)x;
-                                            Log( "", xx, xx.GetType());
+                                            Log(telemetryMsg, "", xx, xx.GetType());
                                         }
                                     }
                                     else if (listType == 137.GetType().FullName)
                                     {
-                                        Log( property.Key, " ... is List of Int64:");
+                                        Log(telemetryMsg, property.Key, " ... is List of Int64:");
                                         foreach (var x in values)
                                         {
                                             int xx = (int)x;
-                                            Log( "", xx, xx.GetType());
+                                            Log(telemetryMsg, "", xx, xx.GetType());
                                         }
                                     }
                                     else if (listType == "string".GetType().FullName)
                                     {
-                                        Log(property.Key," ... is List of string:");
+                                        Log(telemetryMsg,property.Key," ... is List of string:");
                                         foreach (var x in values)
                                         {
                                             string xx = (string)x;
-                                            Log( "", xx, xx.GetType());
+                                            Log(telemetryMsg, "", xx, xx.GetType());
                                         }
                                     }
                                     else if (listType == false.GetType().FullName)
                                     {
-                                        Log(property.Key," ... is List of bool:");
+                                        Log(telemetryMsg,property.Key," ... is List of bool:");
                                         foreach (var x in values)
                                         {
                                             bool xx = (bool)x;
-                                            Log( "", xx, xx.GetType());
+                                            Log(telemetryMsg, "", xx, xx.GetType());
                                         }
                                     }
                                     else if (listType == DateTime.Now.GetType().FullName)
                                     {
-                                        Log(property.Key," ... is List of DateTime:");
+                                        Log(telemetryMsg,property.Key," ... is List of DateTime:");
                                         foreach (var x in values)
                                         {
                                             DateTime xx = (DateTime)x;
-                                            Log( "", xx, xx.GetType());
+                                            Log(telemetryMsg, "", xx, xx.GetType());
                                         }
                                     }
                                     else
                                     {
                                         int num = values.Count;
-                                        Log(String.Format("List is of more complex type: {0}. Number of elements: {1}", listType, num));
+                                        Log(telemetryMsg,String.Format("List is of more complex type: {0}. Number of elements: {1}", listType, num));
                                     }
                                 }
                                 else
-                                    Log(property.Key, "Empty List of double");
+                                    Log(telemetryMsg,property.Key, "Empty List of double");
                             }
                             else if (property.Value.GetType().Name == "121345".GetType().Name)
                             {
                                 Guid guid;
                                 if (Guid.TryParse((string)property.Value, out guid))
                                 {
-                                    Log(property.Key, property.Value,"System.Guid");
+                                    Log(telemetryMsg,property.Key, property.Value,"System.Guid");
                                 }
                                 else
-                                    Log( property.Key, property.Value, property.Value.GetType());
+                                    Log(telemetryMsg, property.Key, property.Value, property.Value.GetType());
                             }
                            else
 			                {
@@ -171,19 +191,19 @@ else
                                     if (vald == Sensor.iNull)
                                         continue;
                                 }
-                                Log(property.Key, property.Value, property.Value.GetType()); //, property.Value.GetType()); //, property.Value.GetType());
+                                Log(telemetryMsg,property.Key, property.Value, property.Value.GetType()); //, property.Value.GetType()); //, property.Value.GetType());
 			                }
                         }
                     }
-                    Logg("&nbsp;");
-
-                    /*Log(String.Format("\tApplication properties (set by device):");
+                    Logg(telemetryMsg,"&nbsp;");
+                    LogMsgs.Add(telemetryMsg);
+                    /*Log(telemetryMsg,String.Format("\tApplication properties (set by device):");
                     foreach (KeyValuePair<string, object> prop in partitionEvent.Data.Properties)
                     {
                         PrintProperties(prop);
                     }
 
-                    Log(String.Format("\tSystem properties (set by IoT Hub):");
+                    Log(telemetryMsg,String.Format("\tSystem properties (set by IoT Hub):");
                     foreach (KeyValuePair<string, object> prop in partitionEvent.Data.SystemProperties)
                     {
                         PrintProperties(prop);
@@ -191,64 +211,77 @@ else
                 }
 
         }
+        string lo = "";
+        var inReverseLogs = LogMsgs.OrderBy(e => e.TimeStamp).Reverse();
+        var first10Logs = inReverseLogs.Take(10);
+        foreach (var tel in first10Logs)
+        {
+           lo += "\n" + tel.msgraw;
+        }
+        LogMsg = new MarkupString(lo);
         StateHasChanged();
     }
 
 
-    void Logg( string msg)
+    void Logg(TelemetryMsg telemetryMsg,  string msg)
     {
-        msgraw += "<tr><td colspan=\"3\">" +msg +"</td>";
-        LogMsg = new MarkupString(msgraw);
+        string row =  "<tr><td colspan=\"3\">"  + msg +"</td></tr>\n";
+        telemetryMsg.msgraw += row;
     }
-    void Log(object omsg)
+    void Log(TelemetryMsg telemetryMsg,object omsg)
     {
         string msg = string.Format("{0}",omsg);
-        msgraw += "<tr>" + "<td>" + msg + "</td>" + "</tr>";
-        LogMsg = new MarkupString(msgraw);
+        string row = "<tr>" + "<td>"  + msg + "</td>" + "</tr>\n";
+        telemetryMsg.msgraw += row;
         StateHasChanged();
     }
 
-    void Log(object  omsg, object omsg2)
+    void Log(TelemetryMsg telemetryMsg,object  omsg, object omsg2)
     {
         string msg = string.Format("{0}",omsg);
         string msg2 = string.Format("{0}",omsg2);
-        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td>" + msg2 + "</td>" + "</tr>";
-        LogMsg = new MarkupString(msgraw);
+        string row = "<tr>" + "<td>"  +  msg + "</td>" + "<td>" + msg2 + "</td>" + "</tr>\n";
+        telemetryMsg.msgraw += row;
         StateHasChanged();
     }
 
-    void Log(object omsg, object omsg2, object omsg3)
-    {
-        string msg = string.Format("{0}",omsg);
-        string msg2 = string.Format("{0}",omsg2);
-        string msg3 = string.Format("{0}",omsg3);
-        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "</tr>";
-        LogMsg = new MarkupString(msgraw);
-        StateHasChanged();
-    }
-
-        void Log(object omsg, object omsg2, object omsg3, object omsg4)
+    void Log(TelemetryMsg telemetryMsg,object omsg, object omsg2, object omsg3)
     {
         string msg = string.Format("{0}",omsg);
         string msg2 = string.Format("{0}",omsg2);
         string msg3 = string.Format("{0}",omsg3);
-        string msg4 = string.Format("{0}",omsg4);
-        msgraw += "<tr>" + "<td>" + msg + ":</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "<td>" + msg4 + "</td>" + "</tr>";
-        LogMsg = new MarkupString(msgraw);
+        string row = "<tr>" + "<td>"  + msg + "</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "</tr>\n";
+        telemetryMsg.msgraw += row;
         StateHasChanged();
     }
 
-    void Log4(object omsg, object omsg2, object omsg3, object omsg4)
+        void Log(TelemetryMsg telemetryMsg,object omsg, object omsg2, object omsg3, object omsg4)
     {
         string msg = string.Format("{0}",omsg);
         string msg2 = string.Format("{0}",omsg2);
         string msg3 = string.Format("{0}",omsg3);
         string msg4 = string.Format("{0}",omsg4);
-        msgraw += "<tr>" + "<td>" + msg + "</td>" + "<td><table><tr><td>" + msg2 + "</td><td align=\"right\">" + msg3 + "</td></tr></table></td>" + "<td>" + msg4 + "</td>" + "</tr>";
-        LogMsg = new MarkupString(msgraw);
+        string row= "<tr>" + "<td>"  + msg + ":</td>" + "<td>" + msg2 + "</td>" + "<td>" + msg3 + "</td>" + "<td>" + msg4 + "</td>" + "</tr>\n";
+        telemetryMsg.msgraw += row;
         StateHasChanged();
     }
 
+    void Log4(TelemetryMsg telemetryMsg, object omsg, object omsg2, object omsg3, object omsg4)
+    {
+        string msg = string.Format("{0}",omsg);
+        string msg2 = string.Format("{0}",omsg2);
+        string msg3 = string.Format("{0}",omsg3);
+        string msg4 = string.Format("{0}",omsg4);
+        string row = "<tr>" + "<td>"  + msg + "</td>" + "<td><table><tr><td>" + msg2 + "</td><td align=\"right\">" + msg3 + "</td></tr></table></td>" + "<td>" + msg4 + "</td>" + "</tr>\n";
+        telemetryMsg.msgraw += row;
+        StateHasChanged();
+    }
 
+    public class TelemetryMsg
+    {
+        public Int64 TimeStamp { get; set; }
+        public string msgraw { get; set; } 
+        public MarkupString Markup  { get { return new MarkupString(msgraw); } }
+    }
 
 }

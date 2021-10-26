@@ -137,6 +137,33 @@
     },
     {
       "@type": "Command",
+      "description": "Start Reading (send telemetry).",
+      "name": "READ",
+      "commandType": "synchronous",
+      "request": {
+        "name": "Parameter",
+        "description":  "OPtional number of msgs to send.",
+        "schema": "integer"
+      },
+      "response": {
+        "name": "RateResponse",
+        "schema": {
+          "@type": "Object",
+          "fields": [
+            {
+              "name": "status",
+              "schema": "int"
+            },
+            {
+              "name": "payload",
+              "schema": "Object"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "@type": "Command",
       "name": "RESET",
       "comment": "This Commands will turn-on the LED light on the device."
     },

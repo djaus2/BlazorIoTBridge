@@ -27,19 +27,8 @@ namespace BlazorIoTBridge.Server.Controllers
 
 
 
-        public static DeviceClient s_deviceClient { get => SimulatedDevicewithCommands.Client4Commands.s_deviceClient; set => SimulatedDevicewithCommands.Client4Commands.s_deviceClient = value; }
-
-
-        // The device connection string to authenticate the device with your IoT hub.
-        // Using the Azure CLI:
-        // az iot hub device-identity show-connection-string --hub-name {YourIoTHubName} --device-id MyDotnetDevice --output table
-        ////private readonly static string s_connectionString = "{Your device connection string here}";
-
-        // For this sample either
-        // - pass this value as a command-prompt argument
-        // - set the IOTHUB_DEVICE_CONN_STRING environment variable 
-        // - create a launchSettings.json (see launchSettings.json.template) containing the variable
-        private static string s_connectionString = Environment.GetEnvironmentVariable("IOTHUB_DEVICE_CONN_STRING");
+        public static DeviceClient s_deviceClient;
+        private static string s_connectionString;
 
 
         /// <summary>
@@ -49,7 +38,6 @@ namespace BlazorIoTBridge.Server.Controllers
         /// </summary>
         public async Task<bool> StartSendDeviceToCloudMessageAsync(Sensor Sensor)
         {
-            System.Diagnostics.Debug.WriteLine("===== SendDeviceToCloudMessageAsync In =====");
             var messageString = JsonConvert.SerializeObject(Sensor);
             var message = new Message(Encoding.ASCII.GetBytes(messageString));
 
@@ -61,10 +49,8 @@ namespace BlazorIoTBridge.Server.Controllers
             try
             {
                 System.Diagnostics.Debug.WriteLine("{0} > Sending message: {1}", DateTime.Now, messageString);
-                Monitor.Enter(SimulatedDevicewithCommands.Client4Commands.s_deviceClient);
                 await s_deviceClient.SendEventAsync(message);
-                Monitor.Exit(SimulatedDevicewithCommands.Client4Commands.s_deviceClient);
-                System.Diagnostics.Debug.WriteLine("{0} > Sent message (OK?): {1}", DateTime.Now, messageString);
+                System.Diagnostics.Debug.WriteLine("{0} > Sent message (OK?): ");
                 return true;
             } catch (Exception ex)
             {
@@ -76,7 +62,7 @@ namespace BlazorIoTBridge.Server.Controllers
         /// <summary>
         /// Constructor: Instantiate the DeviceClient.
         /// </summary>
-        public  SimulatedDeviceCS(string _connection_string)
+        public SimulatedDeviceCS(string _connection_string)
         {
             System.Diagnostics.Debug.WriteLine("===== Starting StartMessageSending =====");
 
@@ -87,47 +73,11 @@ namespace BlazorIoTBridge.Server.Controllers
             System.Diagnostics.Debug.WriteLine("Using Env Var IOTHUB_DEVICE_CONN_STRING = " + s_connectionString);
 
             // Connect to the IoT hub using the MQTT protocol
-            if (s_deviceClient != null)
+            if (s_deviceClient == null)
                 s_deviceClient = DeviceClient.CreateFromConnectionString(s_connectionString, TransportType.Mqtt);
             System.Diagnostics.Debug.WriteLine("===== Finished StartMessageSending =====");
         }
 
-        /// <summary>
-        /// Start sending random telemetry continuously.
-        /// Not used.
-        /// </summary>
-        public  async Task SendDeviceToCloudMessagesAsync()
-        {
-            // Initial telemetry values
-            double minTemperature = 20;
-            double minHumidity = 60;
-            Random rand = new Random();
-
-            while (true)
-            {
-                double currentTemperature = minTemperature + rand.NextDouble() * 15;
-                double currentHumidity = minHumidity + rand.NextDouble() * 20;
-
-                // Create JSON message
-                var telemetryDataPoint = new
-                {
-                    temperature = currentTemperature,
-                    humidity = currentHumidity
-                };
-                var messageString = JsonConvert.SerializeObject(telemetryDataPoint);
-                var message = new Message(Encoding.ASCII.GetBytes(messageString));
-
-                // Add a custom application property to the message.
-                // An IoT hub can filter on these properties without access to the message body.
-                message.Properties.Add("temperatureAlert", (currentTemperature > 30) ? "true" : "false");
-
-                // Send the tlemetry message
-                await s_deviceClient.SendEventAsync(message);
-                Console.WriteLine("{0} > Sending message: {1}", DateTime.Now, messageString);
-
-                await Task.Delay(10 * 1000);
-            }
-        }
     }
 
         
