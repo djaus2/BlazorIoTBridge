@@ -2,13 +2,13 @@
 @using BlazorIoTBridge.Shared
 @inject HttpClient Http
 
-<h1>Posted Sensor Data</h1>
-
-<p>This component demonstrates fetching logged (submitted sensor) data from the server.</p>
+<h1><font color="purple">Posted Sensor Data</font></h1>
+<h4><i>Simulated telemetry data as sent from this app (only) to hub.</i> Not telemetry from the device.</h4>
+<p>This uses the Sensor class model for displaying the data.</p>
 
 @if (sensors == null)
 {
-    <p><em>Loading...</em></p>
+    <p><em>Waiting/Loading...</em></p>
 }
 else
 {

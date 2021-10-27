@@ -78,7 +78,7 @@ namespace ReadD2cMessagesBlaz
             // Otherwise can set a specific time by usings its DateTime.Ticks property
             StartTimeStamp = settings.StartTimeStamp;
             if (StartTimeStamp < 0)
-                lastTS = DateTime.Now.Ticks;
+                lastTS = DateTime.Now.ToUniversalTime().Ticks;
             else
                 lastTS = StartTimeStamp;
             // Run the sample
@@ -127,14 +127,18 @@ namespace ReadD2cMessagesBlaz
                 {
 
                     string data = Encoding.UTF8.GetString(partitionEvent.Data.Body.ToArray());
+                    Int64 ts = partitionEvent.Data.EnqueuedTime.ToUniversalTime().Ticks;
                     dynamic message = JsonConvert.DeserializeObject<ExpandoObject>(data, new ExpandoObjectConverter());
                     msg = message;
                     //Console.WriteLine($"Deserialized JSON into {message.GetType()}");
                     //Console.WriteLine(message.TimeStamp.GetType());
-                    long ts = message.TimeStamp;
+                    long ts2 = message.TimeStamp;
+                    if ((ts2 > 0) && (ts == 0))
+                        ts = ts2;
                     if (ts > lastTS)
                     {
-
+                        if (ts2 == 0)
+                            data = data.Replace(",\"TimeStamp\":0,", $",\"TimeStamp\":{ts},");
                         Console.WriteLine($"\nMessage received on partition {partitionEvent.Partition.PartitionId}:");
                         lastTS = ts;
 
