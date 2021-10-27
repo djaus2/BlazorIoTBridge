@@ -29,4 +29,8 @@
     <ProjectReference Include="..\Shared\BlazorIoTBridge.Shared.csproj" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="REM IF NOT EXIST &quot;c:\temp\appsettings.json&quot; COPY appsettings.json &quot;c:\temp\appsettings.json&quot;" />
+  </Target>
+
 </Project>

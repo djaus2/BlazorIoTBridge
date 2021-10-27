@@ -24,8 +24,9 @@ using System.Reflection;
 // Microsoft.Extensions.Configuration.Jso
 
 using SimulatedDeviceWithDefaultCommandOnly;
+using System.ComponentModel;
 
-namespace Serial2Blazor
+namespace Serial2Blazor_app
 {
     class Program
     {
@@ -51,18 +52,29 @@ namespace Serial2Blazor
         static int defaultTimeout = 5000;
         static string IOTHUB_DEVICE_CONN_STRING = "";
 
+       
+
 
 
         static void Main(string[] args)
         {
+
             var builder = new ConfigurationBuilder()
                             .SetBasePath(Directory.GetCurrentDirectory())
                             .AddJsonFile("appsettings.json", optional: false);
-
             IConfiguration configuration = builder.Build();
             Settings settings = configuration.GetSection("AppSettings").Get<Settings>();
+            string userDir = settings.UserDir;
 
-            
+            if (Directory.Exists(userDir))
+            {
+                if (File.Exists(Path.Combine(userDir, "appsettings.json")))
+                {
+                    var appsettings  = JsonConvert.DeserializeObject<App_Settings>(File.ReadAllText(@"c:\temp\\appsettings.json"));
+                    settings = appsettings.AppSettings;                
+                }
+            }
+
 
             _host = $@"{settings.Host}:{settings.Port}/";
             delay = settings.Delay_Secs;
@@ -95,35 +107,31 @@ namespace Serial2Blazor
                 }
 
                 string port = "";
-                bool cont;
+                bool contin;
                 do
                 {
-                    Console.WriteLine("If USB is NOT inserted, insert now and enter x for the COM port in next.");
+                    Console.WriteLine("If USB cable is NOT inserted, insert now.");
                     if (comport == "")
-                        Console.Write($"> \tPort no: (No default) ");
+                        Console.Write($"> \tCOM Port/Port no: (No default) ");
                     else
-                        Console.Write($"> \tPort no: (Default {comport}) ");
+                        Console.Write($"> \tCOM Port/Port no: (Default {comport}) ");
+
                     port = Console.ReadLine();
+                    ports = SerialPort.GetPortNames();
+                    lst = new List<string>(ports);
                     //Alllow for just the port number
-                    if (!(port.ToLower() == "x"))
-                    {
-                        if (port.Length == 1)
-                            port = "COM" + port;
-                        cont = !lst.Contains(port);
-                        // Can just press return for defaults.
-                        if ((string.IsNullOrEmpty(port)) && (comport != ""))
-                            cont = false;
-                    }
+                    if (port.Length == 1)
+                        port = "COM" + port;
+                    // Can just press return for defaults.
+                    if ((string.IsNullOrEmpty(port)) && (comport != ""))
+                        contin = false;
                     else
-                    {
-                        comport = settings.ComPort;
-                        ports = SerialPort.GetPortNames();
-                        cont = !lst.Contains(port);
-                    }
-                } while (cont);
+                        contin = !lst.Contains(port);
+                } while (contin);
+
                 if (!string.IsNullOrEmpty(port))
                     comport = port;
-
+                settings.ComPort = comport;
                 Console.Write($"> \tbaudrate: (Default: {baudrate}) ");
                 string newbaudrate = Console.ReadLine();
                 if (!string.IsNullOrEmpty(newbaudrate))
@@ -131,6 +139,7 @@ namespace Serial2Blazor
                     if (!int.TryParse(newbaudrate, out baudrate))
                         baudrate = settings.BaudRate;
                 }
+                settings.BaudRate = baudrate;
 
                 Console.Write($"> \tTime (in sec) between reads: (Default:{delay}) ");
                 string secs = Console.ReadLine();
@@ -138,24 +147,47 @@ namespace Serial2Blazor
                 {
                     delay = settings.Delay_Secs;
                 }
+                settings.Delay_Secs = delay;
 
                 Console.Write($@"> Blazor Server URL:Port: (Default:{_host} ) ");
                 string newhost = Console.ReadLine();
                 if (!string.IsNullOrEmpty(newhost))
-                    _host = newhost;
-
-            }
-            else
-            {
-                if (IsRealDevice)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.BackgroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("> \tPlease remove and reinsert the USB cable NOW ... then ...");
-                    Console.ResetColor();
-                    Console.WriteLine("> \tNb: It needs to be in at start.");
+                    _host = newhost;
+                    string[] parts = _host.Split(":");
+                    if (parts.Length == 2)
+                    {
+                        if (uint.TryParse(parts[1], out uint p))
+                        {
+                            settings.Host = parts[0];
+                            settings.Port = p;
+                        }
+                    }
+                }
+                Console.Write("Save user settings to {}? ");
+                string yesno = Console.ReadLine();
+                if (!string.IsNullOrEmpty(yesno))
+                {
+                    if (yesno.ToUpper()[0] == 'Y')
+                    {
+                        if (Directory.Exists(userDir))
+                        {
+                            App_Settings appsettings = new App_Settings { AppSettings = settings };
+                            File.WriteAllText(Path.Combine(userDir, "appsettings.json"), JsonConvert.SerializeObject(appsettings));// This overwrites
+                        }
+                    }
                 }
             }
+
+            if (IsRealDevice)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.BackgroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("> \tPlease remove and reinsert the USB cable NOW ... then ...");
+                Console.ResetColor();
+                Console.WriteLine("> \tNb: It needs to be in at start.");
+            }
+
 
             if (_host[_host.Length - 1] != '/')
                 _host += "/";
@@ -212,6 +244,7 @@ namespace Serial2Blazor
 
                 }
                 FirstRecv = true;
+
                 while (cont)
                 {
                     if (IsRealDevice)
@@ -233,6 +266,23 @@ namespace Serial2Blazor
             }
             else
                 Console.WriteLine("Serial port {0} failed to open.", comport);
+        }
+
+        private static void frmSettings1_SettingsSaving(object sender, CancelEventArgs e)
+        {
+            ////Should check for settings changes first.
+            //DialogResult dr = MessageBox.Show(
+            //                "Save current values for application settings?",
+            //                "Save Settings", MessageBoxButtons.YesNo);
+            //if (DialogResult.No == dr)
+            //{
+            //    e.Cancel = true;
+            //}
+        }
+
+        private static void frmSettings1_SettingChanging(object sender, SettingChangingEventArgs e)
+        {
+            //throw new NotImplementedException(); //Status only
         }
 
         public static async Task Signal()
@@ -718,6 +768,7 @@ namespace Serial2Blazor
     }
     public class Settings
     {
+        public string UserDir { get; set; } 
         public bool Auto { get; set; }
         public string ComPort { get; set; }
         public int BaudRate { get; set; }
@@ -743,4 +794,42 @@ namespace Serial2Blazor
 
 
     }
+
+    public class App_Settings
+    {
+        public Settings AppSettings { get; set; }
+    }
+    //sealed class FormSettings : ApplicationSettingsBase
+    //{
+    //    [UserScopedSettingAttribute()]
+    //    public Settings FormText
+    //    {
+    //        get { return (Settings)this["FormText"]; }
+    //        set { this["FormText"] = value; }
+    //    }
+
+    //    //[UserScopedSettingAttribute()]
+    //    //[DefaultSettingValueAttribute("0, 0")]
+    //    //public Point FormLocation
+    //    //{
+    //    //    get { return (Point)(this["FormLocation"]); }
+    //    //    set { this["FormLocation"] = value; }
+    //    //}
+
+    //    //[UserScopedSettingAttribute()]
+    //    //[DefaultSettingValueAttribute("225, 200")]
+    //    //public Size FormSize
+    //    //{
+    //    //    get { return (Size)this["FormSize"]; }
+    //    //    set { this["FormSize"] = value; }
+    //    //}
+
+    //    //[UserScopedSettingAttribute()]
+    //    //[DefaultSettingValueAttribute("LightGray")]
+    //    //public Color FormBackColor
+    //    //{
+    //    //    get { return (Color)this["FormBackColor"]; }
+    //    //    set { this["FormBackColor"] = value; }
+    //    //}
+    //}
 }
