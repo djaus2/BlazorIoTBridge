@@ -28,12 +28,18 @@ using System.ComponentModel;
 
 namespace Serial2Blazor_app
 {
+    /// <summary>
+    /// Get Csv list of commands from device and forward to BlazorIoTBridge.
+    /// Or if simulating forward list from settings. See CommandsIfIsSimDevice
+    /// Get telemetry from device or serial port, or simulate telemetry.
+    /// Forward telemetry to IoT Hub direct from here (method in Client4Commands)  or via BlazorIoTBridge.
+    /// - Poll BlazorIoTBridge for commands direct from there.
+    /// - SetMethodDefaultHandler (in Client4Commands) as handler of Commands direct from Hub
+    /// For both of 2 above either send commands to device serially, or if simulating simulate here.
+    /// </summary>
     class Program
     {
         static IConfigurationRoot configuration { get; set; }
-        //public static int Timeout1 { get => Timeout2; set => Timeout2 = value; }
-        //public static int Timeout2 { get => Timeout; set => Timeout = value; }
-
         static SerialPort _serialPort;
 
         static string _host = "https://localhost:44318/";
@@ -51,21 +57,25 @@ namespace Serial2Blazor_app
         static string CommandsIfIsSimDevice = "GETCOMANDS,RATE";
         static int defaultTimeout = 5000;
         static string IOTHUB_DEVICE_CONN_STRING = "";
+        static bool fwdTelemetrythruBlazorSvr = true;
 
-       
+
+
 
 
 
         static void Main(string[] args)
         {
-
+            //[1] Load default settings
             var builder = new ConfigurationBuilder()
                             .SetBasePath(Directory.GetCurrentDirectory())
                             .AddJsonFile("appsettings.json", optional: false);
             IConfiguration configuration = builder.Build();
             Settings settings = configuration.GetSection("AppSettings").Get<Settings>();
-            string userDir = settings.UserDir;
 
+
+            // [2] Get user location of (saved) appsettings.json from above and load if it exists.
+            string userDir = settings.UserDir;
             if (Directory.Exists(userDir))
             {
                 if (File.Exists(Path.Combine(userDir, "appsettings.json")))
@@ -75,26 +85,46 @@ namespace Serial2Blazor_app
                 }
             }
 
+            // Start without prompting if COM seetings are OK
+            auto = settings.Auto;
 
+            // Is device an actual Arduino or simuloated here?
+            IsRealDevice = settings.IsRealDevice;
+
+            // Forward telemetry via Blazor Svc or direct to hub from here
+            fwdTelemetrythruBlazorSvr = settings.FwdTelemetrythruBlazorSvr;
+
+            //Blazor Svc
             _host = $@"{settings.Host}:{settings.Port}/";
+
             delay = settings.Delay_Secs;
+
+            // COM Settings
             comport = settings.ComPort;
             baudrate = settings.BaudRate;
-            auto = settings.Auto;
+
             InitialMessage = settings.InitialMessage;
+
+            // Create json packet for acks back to device
             if (settings.ACK.Length > 0)
                 ACK = "{\"Action\":\"" + settings.ACK + "\"}";
+
             ReadCommandsUrl = (settings.ReadCommandsController).Replace("Controller", "");
             SensorApi = (settings.SensorController).Replace("Controller", "");
-            IsRealDevice = settings.IsRealDevice;
+
             CommandsIfIsSimDevice = settings.CommandsIfIsSimDevice;
             defaultTimeout = settings.defaultTimeout;
+
+            // Hub device connection string
             IOTHUB_DEVICE_CONN_STRING = settings.IOTHUB_DEVICE_CONN_STRING;
+
 
             Console.WriteLine("> \tHello IoT Nerd!");
             // Get a list of serial port names.
             string[] ports = SerialPort.GetPortNames();
             var lst = new List<string>(ports);
+
+            // Skip COM settings input if Auto mode, COM port is valid and is real device.
             if (((!auto) || (!lst.Contains(comport))) && (IsRealDevice))
             {
                 if (!lst.Contains(comport))
@@ -164,7 +194,7 @@ namespace Serial2Blazor_app
                         }
                     }
                 }
-                Console.Write("Save user settings to {}? ");
+                Console.Write($"Save user settings to {userDir}? [Y/N]");
                 string yesno = Console.ReadLine();
                 if (!string.IsNullOrEmpty(yesno))
                 {
@@ -268,23 +298,12 @@ namespace Serial2Blazor_app
                 Console.WriteLine("Serial port {0} failed to open.", comport);
         }
 
-        private static void frmSettings1_SettingsSaving(object sender, CancelEventArgs e)
-        {
-            ////Should check for settings changes first.
-            //DialogResult dr = MessageBox.Show(
-            //                "Save current values for application settings?",
-            //                "Save Settings", MessageBoxButtons.YesNo);
-            //if (DialogResult.No == dr)
-            //{
-            //    e.Cancel = true;
-            //}
-        }
 
-        private static void frmSettings1_SettingChanging(object sender, SettingChangingEventArgs e)
-        {
-            //throw new NotImplementedException(); //Status only
-        }
-
+        /// <summary>
+        /// Watch for Commands, sent from Hub via Blazor Svc
+        /// Actuially just poll Blazor Svc for them.
+        /// </summary>
+        /// <returns></returns>
         public static async Task Signal()
         {
             while ((IsFirstSerialRead) && (!IsRealDevice))
@@ -307,9 +326,7 @@ namespace Serial2Blazor_app
                     //See if a new command has been sent
                     using var client = new System.Net.Http.HttpClient();
                     client.BaseAddress = new Uri(_host);
-                    //var response = await client.GetAsync("Sensor");
-                    //cmd = await response.Content.ReadAsStringAsync();
-                    Command _command = await client.GetFromJsonAsync<Command>(ReadCommandsUrl, null);  //.GetJsonAsync<Command>("Sensor")
+                    Command _command = await client.GetFromJsonAsync<Command>(ReadCommandsUrl, null);
                     if (!IsRealDevice && isFirstRead)
                     {
                         isFirstRead = false;
@@ -378,6 +395,9 @@ namespace Serial2Blazor_app
 
         }
 
+        /// <summary>
+        /// Action Commands if in simulate device mode
+        /// </summary>
         public class InvokeMethod
         {
             public void Invoke(string name, int? parameter)
@@ -544,30 +564,26 @@ namespace Serial2Blazor_app
                 }
             }
         }
+        
+        
         public static async Task Read()
         {
-            // Device expects an initial char to complete SetUp()
+
             Monitor.Enter(_serialPort);
             _serialPort.WriteLine("RESET");
-            Thread.Sleep(1000);
+            // Wait for it
+            Thread.Sleep(3000);
+            // Device expects an initial char to complete SetUp()
             _serialPort.Write("*");
             Monitor.Exit(_serialPort);
-            //Thread.Sleep(1000);
             while (true)
             {
 
                 try
                 {
                     string sensor = "";
-                    //if (_serialPort.BytesToRead > 0)
-                    //{
-                    //    while (_serialPort.BytesToRead > 0)
-                    //    {
-                    //        sensor += _serialPort.ReadExisting();
-                    //    }
-                    //Monitor.Enter(_serialPort);  Only one reader
+
                     sensor = _serialPort.ReadLine();
-                    //Monitor.Exit(_serialPort);
                     sensor = sensor.Trim();
 
                     if (!string.IsNullOrEmpty(sensor))
@@ -587,15 +603,10 @@ namespace Serial2Blazor_app
                         {
                             string comandsCsv = sensor.Substring(1).Trim();
                             await SendCommands(comandsCsv);
-                            // Make sure not sending a command when sending an ACK
-                            // Monitor.Enter(_serialPort);
-
-                            //_serialPort.Write(new char[] { ACK }, 0, 1);
-                            //Monitor.Exit(_serialPort);
                         }
                         else if (sensor[0] == '*')
                         {
-                            //Ignore message from device
+                            //Ignore message(comments) from device
                             continue;
                         }
                         else if (sensor[0] == '{')
@@ -612,12 +623,8 @@ namespace Serial2Blazor_app
                             Console.WriteLine("> \tInvalid Sensor Data: " + sensor);
                         }
                     }
-                    //An empty Serial.println(""); gets to here so is OK
-                    //else Console.WriteLine("> Invalid Sensor Data.");
                 }
-                catch (TimeoutException ex) {
-                    string msg = ex.Message;
-                    msg = "";
+                catch (TimeoutException) {
                 }
                 catch (Exception ex)
                 {
@@ -634,61 +641,66 @@ namespace Serial2Blazor_app
 
             try
             {
-                using var httpClient = new System.Net.Http.HttpClient();
-                httpClient.BaseAddress = new Uri(_host);
-                // Note no "api/Sensor" but just "Sensor" in next LOC!:
-       
                 Console.Write("Sending ... ");
                 DateTime now = DateTime.Now;
-                //var response = await httpClient.PostAsJsonAsync<Sensor>(SensorApi, sensor, null);
-                Console.WriteLine("Commands Sent OK");
-                //string[] args = new string[] { IOTHUB_DEVICE_CONN_STRING, commands };
-                bool res = await Client4Commands.StartSendDeviceToCloudMessageAsync(sensor);
-                if (res)
-                    Console.Write(" Sent: ");
+                if (fwdTelemetrythruBlazorSvr)
+                {
+                    using var httpClient = new System.Net.Http.HttpClient();
+                    httpClient.BaseAddress = new Uri(_host);
+
+                    // Note no "api/Sensor" but just "Sensor" in next LOC!:
+                    var response = await httpClient.PostAsJsonAsync<Sensor>(SensorApi, sensor, null);
+                    Console.WriteLine("Commands Sent OK");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine("Sent OK");
+                        bool keepTrying = true;
+                        while (keepTrying)
+                        {
+                            var responseGet = await httpClient.GetAsync(SensorApi);
+                            string resp = await responseGet.Content.ReadAsStringAsync();
+                            switch (resp)
+                            {
+                                case "0":
+                                    Console.Write("Trying");
+                                    break;
+                                case "1":
+                                    Console.Write("Done");
+                                    if (FirstRecv)
+                                    {
+                                        FirstRecv = false;
+                                        //await SendCommands($"{CommandsIfIsSimDevice}");
+                                    }
+                                    keepTrying = false;
+                                    break;
+                                case "-1":
+                                    keepTrying = false;
+                                    Console.Write("There was a a problem with the transmission.");
+                                    break;
+                                case "-2":
+                                    keepTrying = false;
+                                    Console.Write("There was a service error.");
+                                    break;
+                            }
+                        }
+                        TimeSpan ts = DateTime.Now.Subtract(now);
+                        Console.WriteLine(" - {0} seconds", ts.TotalMilliseconds / 1000);
+                    }
+                    else
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
+                    }
+                }
                 else
-                    Console.WriteLine(" Not sent.");
-           
-                //if (response.IsSuccessStatusCode)
-                //{
-                //    Console.WriteLine("Sent OK");
-                //    bool keepTrying = true;
-                //    while (keepTrying)
-                //    {
-                //        var responseGet = await httpClient.GetAsync(SensorApi);
-                //        string resp = await responseGet.Content.ReadAsStringAsync();
-                //        switch (resp)
-                //        {
-                //            case "0":
-                //                Console.Write("Trying");
-                //                break;
-                //            case "1":
-                //                Console.Write("Done");
-                //                if (FirstRecv)
-                //                {
-                //                    FirstRecv = false;
-                //                    //await SendCommands($"{CommandsIfIsSimDevice}");
-                //                }
-                //                keepTrying = false;
-                //                break;
-                //            case "-1":
-                //                keepTrying = false;
-                //                Console.Write("There was a a problem with the transmission.");
-                //                break;
-                //            case "-2":
-                //                keepTrying = false;
-                //                Console.Write("There was a service error.");
-                //                break;
-                //        }
-                //    }
-                    TimeSpan ts = DateTime.Now.Subtract(now);
-                    Console.WriteLine(" - {0} seconds", ts.TotalMilliseconds/1000);
-                //}
-                //else
-                //{
-                //    Console.WriteLine();
-                //    //Console.WriteLine("Not OK: {0} {1}", response.StatusCode, response.ReasonPhrase);
-                //}
+                {
+                    // Forwading direc to the hub.
+                    bool res = await Client4Commands.StartSendDeviceToCloudMessageAsync(sensor);
+                    if (res)
+                        Console.Write(" Sent: ");
+                    else
+                        Console.WriteLine(" Not sent.");
+                }
             }
             catch (Exception ex)
             {
@@ -710,16 +722,13 @@ namespace Serial2Blazor_app
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.Write("\tSending Commands ... ");
                 List<string> cmds = new List<string>(commands.Split(','));
-                //DeviceCommands deviceCommands = new DeviceCommands { Id = "", Commands = cmds };
-                //var response = await client.PostAsync("CommansdsDirectFromHub/PostAddCommands", new StringContent(commands, Encoding.UTF8));
                 var response = await client.PostAsJsonAsync<List<string>>("CommandsViaHub", cmds, null);
                 Console.Write(" Sent: ");
-
-
                 if (response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Commands Sent OK");
                     string[] args = new string[] { IOTHUB_DEVICE_CONN_STRING, commands };
+                    // Start monitoring for commands
                     Client4Commands.Main(args, DoCommand).GetAwaiter();
                 }
                 else
@@ -766,9 +775,17 @@ namespace Serial2Blazor_app
 
         }
     }
+
+    /// <summary>
+    /// Loaded from appsettings.json from app location
+    /// i.e. Default settings. 
+    /// Can directly edit before running app.
+    /// </summary>
     public class Settings
     {
         public string UserDir { get; set; } 
+
+        public bool FwdTelemetrythruBlazorSvr { get; set; }
         public bool Auto { get; set; }
         public string ComPort { get; set; }
         public int BaudRate { get; set; }
@@ -790,46 +807,16 @@ namespace Serial2Blazor_app
         public int defaultTimeout { get; set; }
 
         public string IOTHUB_DEVICE_CONN_STRING { get; set; }
-
-
-
     }
 
+
+    /// <summary>
+    /// Loaded from appsettings.json in user area (eg c:\temp) 
+    /// Can be saved after making COM etc selecxtions at start.
+    /// </summary>
     public class App_Settings
     {
         public Settings AppSettings { get; set; }
     }
-    //sealed class FormSettings : ApplicationSettingsBase
-    //{
-    //    [UserScopedSettingAttribute()]
-    //    public Settings FormText
-    //    {
-    //        get { return (Settings)this["FormText"]; }
-    //        set { this["FormText"] = value; }
-    //    }
-
-    //    //[UserScopedSettingAttribute()]
-    //    //[DefaultSettingValueAttribute("0, 0")]
-    //    //public Point FormLocation
-    //    //{
-    //    //    get { return (Point)(this["FormLocation"]); }
-    //    //    set { this["FormLocation"] = value; }
-    //    //}
-
-    //    //[UserScopedSettingAttribute()]
-    //    //[DefaultSettingValueAttribute("225, 200")]
-    //    //public Size FormSize
-    //    //{
-    //    //    get { return (Size)this["FormSize"]; }
-    //    //    set { this["FormSize"] = value; }
-    //    //}
-
-    //    //[UserScopedSettingAttribute()]
-    //    //[DefaultSettingValueAttribute("LightGray")]
-    //    //public Color FormBackColor
-    //    //{
-    //    //    get { return (Color)this["FormBackColor"]; }
-    //    //    set { this["FormBackColor"] = value; }
-    //    //}
-    //}
+  
 }
