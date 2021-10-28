@@ -54,6 +54,18 @@ namespace InvokeDeviceMethod
             if (args.Length > 3)
                 payload = args[3];
 
+            if (command[0] == '*')
+            {
+                string inullStrn = ((int)Sensor.iNull).ToString();
+                if (
+                    (string.IsNullOrEmpty(payload)) ||
+                    (payload == "null") ||
+                    (payload == inullStrn)
+                    )
+                    return -1;
+                command = command.Substring(1);
+            }
+
             //s_connectionString = "HostName=PnPHub4.azure-devices.net;SharedAccessKeyName=service;SharedAccessKey=l6z5TzRQvJK+hVELXWhlbyWEBLuBX1VBi+SVC2t+LGI=";
 
             System.Diagnostics.Debug.WriteLine("InvokeDeviceMethod creating: " + command);
@@ -81,6 +93,7 @@ namespace InvokeDeviceMethod
         // Invoke the direct method on the device, passing the payload
         private static async Task<int> InvokeMethodAsync()
         {
+
             var methodInvocation = new CloudToDeviceMethod(command)
             {
                 ResponseTimeout = TimeSpan.FromSeconds(30),

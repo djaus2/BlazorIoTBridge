@@ -128,7 +128,7 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
         {
             //Commands that require a parameter have a leading * in name.
             if (int.TryParse(value, out val))
-                cmd = new BlazorIoTBridge.Shared.Command { Action = command.Substring(1), Parameter = val };
+                cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
             else
             {
                 await JSRuntime.InvokeVoidAsync("alert", new string[] { "Command requires a parameter" });
