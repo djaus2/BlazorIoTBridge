@@ -169,8 +169,8 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
                     }
                     else
                     {                 
-                        System.Diagnostics.Debug.WriteLine("$Sent Command OK. Took {count -1} retries.");
-                        Response += "$Sent Command OK. Took {count -1} retries.<br/>";
+                        System.Diagnostics.Debug.WriteLine($"Finally ... Sent Command OK. Took {count -1} retries.");
+                        Response = $"Finally ... Sent Command {cmd.Action} OK. Took {count -1} retries.<br/>";
                     }
                     notDone = false;
                 }

@@ -217,7 +217,19 @@ namespace Serial2Blazor_app
                 Console.ResetColor();
                 Console.WriteLine("> \tNb: It needs to be in at start.");
             }
-
+            Console.WriteLine();
+            if (!fwdTelemetrythruBlazorSvr)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("Telemetry send mode set to direct to hub.");
+            }
+            else 
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("Telemetry send mode set to via BlazorIoTBridge.");
+            }
+            Console.ResetColor();
+            Console.WriteLine();
 
             if (_host[_host.Length - 1] != '/')
                 _host += "/";
@@ -343,6 +355,28 @@ namespace Serial2Blazor_app
                             cd = cd.Trim();
                             if (cd != "")
                             {
+                                if (_command.Action.Length > "Send Telemetry".Length)
+                                {
+                                    if (_command.Action.Substring(0, "Send Telemetry".Length) == "Send Telemetry")
+                                    {
+                                        Console.WriteLine();
+                                        if (_command.Action.ToLower().Contains("direct"))
+                                        {
+                                            Console.ForegroundColor = ConsoleColor.Yellow;
+                                            Console.WriteLine("Telemetry send mode set to direct to hub.");
+                                            fwdTelemetrythruBlazorSvr = false;
+                                        }
+                                        else if (_command.Action.ToLower().Contains("via"))
+                                        {
+                                            Console.ForegroundColor = ConsoleColor.Cyan;
+                                            Console.WriteLine("Telemetry send mode set to via BlazorIoTBridge.");
+                                            fwdTelemetrythruBlazorSvr = true;
+                                        }
+                                        Console.ResetColor();
+                                        Console.WriteLine();
+                                        continue;
+                                    }
+                                }
                                 if (IsRealDevice)
                                 {
                                     //Forward serially
@@ -359,7 +393,7 @@ namespace Serial2Blazor_app
                                             imv.Invoke(_command.Action, _command.Parameter);
                                             Console.ForegroundColor = ConsoleColor.Green;
                                             Console.WriteLine($"Got command {_command.Action} with parameter {_command.Parameter}");
-                                            Console.ForegroundColor = ConsoleColor.White;
+                                            Console.ResetColor();
                                         }
                                         else
                                         {
@@ -367,7 +401,7 @@ namespace Serial2Blazor_app
                                             imv.Invoke(_command.Action, null);
                                             Console.ForegroundColor = ConsoleColor.Blue;
                                             Console.WriteLine($"Got command {_command.Action}");
-                                            Console.ForegroundColor = ConsoleColor.White;
+                                            Console.ResetColor();
                                         }
                                     }
                                    else

@@ -187,7 +187,10 @@ public async Task Enter(KeyboardEventArgs e)
     {
         var response = await client.GetFromJsonAsync<Command[]>("CommandsViaHub");
         if (response != null)
+        {
             commands = response.ToList();
+
+        }
         else
             commands = null;
     }
@@ -199,6 +202,9 @@ public async Task Enter(KeyboardEventArgs e)
         var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommandsViaHub", cmd,null);
         RegisteredCommands = await response.Content.ReadAsStringAsync();
         RegCmdz = RegisteredCommands.Split(',').ToList<string>();
+        RegCmdz.Add("");
+        RegCmdz.Add("Send Telemetry direct to hub");
+        RegCmdz.Add("Send Telemetry via here");
         StateHasChanged();
     }
 
