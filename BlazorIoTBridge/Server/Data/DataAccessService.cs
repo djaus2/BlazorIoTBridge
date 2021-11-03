@@ -12,32 +12,28 @@ using System.Threading;
 
 namespace BlazorIoTBridge.Server.Data
 {
-    public interface IDataAccessService
-    {
-        string GetInfo();
-        int LogSensor(Sensor sensor);
-        List<Sensor> GetLogs();
-        void Reset(bool state);
-        int GetStatus();
-        void SetStatus(int val);
-        void EnqueueCommand(Command cmd);
-        Command DequeueCommand();
 
-        bool Started { get; set; }
-
-        int CommandsCount();
-        //Command[] CommandsToArray();
-
-        List<Command> GetAddedCommandsLog();
-        List<Command> GetCommands();
-
-    }
-    public class DataAccessService: IDataAccessService
+    public class DataAccessService : IDataAccessService
     {
         private IConfiguration config;
         public DataAccessService(IConfiguration configuration)
         {
             config = configuration;
+            Clear();
+            //Guid g = new Guid("6513d5ed-c0f2-4346-b3fa-642c48fd66a5");
+            //DeviceIds.Add(g);
+            //Devices.Add(g, new Device { Id = g, settings = new Info()});
+
+        }
+
+        public List<Guid> DeviceIds { get; set; }
+
+        public Dictionary<Guid, Device> Devices { get; set; }
+
+        public void Clear()
+        {
+            Devices = new Dictionary<Guid, Device>();
+            DeviceIds = new List<Guid>();
             Reset(true);
         }
 
@@ -46,14 +42,21 @@ namespace BlazorIoTBridge.Server.Data
         public void Reset(bool state)
         {
             PostLog = new List<Sensor>();
-            Commands = new ConcurrentQueue<Command>();
-            Commands2 = new ConcurrentQueue<Command>();
             Started = state;
         }
 
+        public void Register(Guid id)
+        {
+            Device device = new Device(id);
+            Devices.Add(id, device);
+        }
+
+        public void DeRegister(Guid id)
+        {
+            Devices.Remove(id);
+        }
+
         private List<Sensor> PostLog { get; set; } = null;
-        private ConcurrentQueue<Command> Commands { get; set; } = null;
-        private ConcurrentQueue<Command> Commands2 { get; set; } = null;
 
         public int LogSensor(Sensor sensor)
         {
@@ -106,6 +109,101 @@ namespace BlazorIoTBridge.Server.Data
             Status = val;
         }
 
+        public void EnqueueCommand(Guid id, Command cmd)
+        {
+            if (!Devices.Keys.Contains(id))
+                Devices.Add(id, new Device(id));
+            Devices[id].EnqueueCommand(cmd);
+        }
+        public Command DequeueCommand(Guid id)
+        {
+            if (Devices.Keys.Contains(id))
+                return Devices[id].DequeueCommand();
+            else
+                return null;
+        }
+
+        //public List<Command> GetAddedCommandsLog()
+        //{
+        //    List<Command> cmds = new List<Command>();
+        //    Command cmd;
+        //    while (Commands.Count() != 0)
+        //    {
+        //        if (Commands.TryDequeue(out cmd))
+        //            cmds.Add(cmd);
+        //        else
+        //            break;
+        //    }
+        //    if (cmds.Count() != 0)
+        //        System.Diagnostics.Debug.WriteLine("Len {0}", cmds.Count());
+        //    cmds.Reverse();
+        //    return cmds;
+        //}
+        public List<Command> GetCommands()
+        {
+            List<Command> cmds = new List<Command>();
+            foreach (Guid dev in Devices.Keys)
+            {
+                if (Devices[dev] != null)
+                    cmds.AddRange(Devices[dev].CommandsToArray());
+            }
+            return cmds;
+        }
+
+        public int CommandsCount()
+        {
+            int count = 0;
+            foreach (Guid dev in Devices.Keys)
+            {
+                count += Devices[dev].CommandsCount();
+            }
+            return count;
+        }
+
+        public Command[] CommandsToArray()
+        {
+            List<Command> cmds = new List<Command>();
+            foreach (Guid dev in Devices.Keys)
+            {
+                cmds.AddRange(Devices[dev].CommandsToArray());
+            }
+            return cmds.ToArray();
+        }
+    }
+
+    public class Device : IDevice
+    {
+        public Device()
+        {
+            Reset(true);
+        }
+        public Device(Guid id)
+        {
+            Id = id;
+            Reset(true);
+        }
+        //public Device(Guid id, Info _settings)
+        //{
+        //    Id = id;
+        //    Reset(true);
+        //    //settings = _settings;
+        //}
+        public Guid Id { get; set; }
+
+
+        //public Info settings { get; set; }
+
+        public void Reset(bool state)
+        {
+
+            Commands = new ConcurrentQueue<Command>();
+            Commands2 = new ConcurrentQueue<Command>();
+
+        }
+
+        private ConcurrentQueue<Command> Commands { get; set; } = null;
+        private ConcurrentQueue<Command> Commands2 { get; set; } = null;
+
         public void EnqueueCommand(Command cmd)
         {
             Commands.Enqueue(cmd);
@@ -120,22 +218,22 @@ namespace BlazorIoTBridge.Server.Data
                 return null;
         }
 
-        public List<Command> GetAddedCommandsLog()
-        {
-            List<Command> cmds = new List<Command>();
-            Command cmd;
-            while (Commands.Count() != 0)
-            {
-                if (Commands.TryDequeue(out cmd))
-                    cmds.Add(cmd);
-                else
-                    break;
-            }
-            if (cmds.Count() != 0)
-                System.Diagnostics.Debug.WriteLine("Len {0}", cmds.Count());
-            cmds.Reverse();
-            return cmds;
-        }
+        //public List<Command> GetAddedCommandsLog()
+        //{
+        //    List<Command> cmds = new List<Command>();
+        //    Command cmd;
+        //    while (Commands.Count() != 0)
+        //    {
+        //        if (Commands.TryDequeue(out cmd))
+        //            cmds.Add(cmd);
+        //        else
+        //            break;
+        //    }
+        //    if (cmds.Count() != 0)
+        //        System.Diagnostics.Debug.WriteLine("Len {0}", cmds.Count());
+        //    cmds.Reverse();
+        //    return cmds;
+        //}
         public List<Command> GetCommands()
         {
             return Commands.ToList(); ;
@@ -150,6 +248,7 @@ namespace BlazorIoTBridge.Server.Data
         {
             return Commands.ToArray();
         }
-
     }
+
+
 }

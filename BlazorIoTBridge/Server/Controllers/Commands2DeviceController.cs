@@ -18,13 +18,13 @@ namespace BlazorIoTBridge.Server.Controllers
     /// </summary>
     [ApiController]
     [Route("[controller]")]
-    public class Commands2DeviceV2Controller : ControllerBase
+    public class Commands2DeviceController : ControllerBase
     {
 
         private readonly AppSettings appsettings;
         private readonly IDataAccessService dataaccesssservice;
 
-        public Commands2DeviceV2Controller(AppSettings _appsettings, IDataAccessService _dataaccesservice)
+        public Commands2DeviceController(AppSettings _appsettings, IDataAccessService _dataaccesservice)
         {
             this.dataaccesssservice = _dataaccesservice;
             this.appsettings = _appsettings;
@@ -34,11 +34,11 @@ namespace BlazorIoTBridge.Server.Controllers
 
         //public static ConcurrentQueue<Command> Commands { get; set; } = null;
 
-        public void SetCommand(Command value)
+        public void SetCommand(Guid id, Command cmd)
         {
 
-            //Monitor.Enter(block);
-            dataaccesssservice.EnqueueCommand(value);
+            //Monitor.Enter(block)
+            dataaccesssservice.EnqueueCommand(id, cmd);
             //Monitor.Exit(block);
         }
 
@@ -46,10 +46,10 @@ namespace BlazorIoTBridge.Server.Controllers
         /// Same as Command=>Get but dequeues it.
         /// </summary>
         /// <returns></returns>
-        public Command GetCommand()
+        public Command GetCommand(Guid id)
         {
             //Monitor.Exit(block);
-            return dataaccesssservice.DequeueCommand();
+            return dataaccesssservice.DequeueCommand(id);
         }
         public  void ResetQ(bool state)
         {
@@ -74,9 +74,10 @@ namespace BlazorIoTBridge.Server.Controllers
                 }
                 else
                 {
+                    Guid id = Guid.Parse(cmd.Id);
                     if (dataaccesssservice.Started)
                     {
-                        SetCommand(cmd);
+                        SetCommand(id,cmd);
                         System.Diagnostics.Debug.WriteLine($"Number of comamnds in Q: {dataaccesssservice.CommandsCount()}");
                     }
                     else
@@ -93,22 +94,23 @@ namespace BlazorIoTBridge.Server.Controllers
                 return BadRequest($"{cmd.Action} : Probably call to wrong controller. Try CommansdsDirectFromHubController.");
         }
 
+        private string IdGuid = "6513d5ed-c0f2-4346-b3fa-642c48fd66a5";
 
-        [HttpGet]
-        public   IActionResult Get()
+        [HttpGet("{id:guid}")]
+        public   IActionResult Get(Guid id)
         {
 
             Command cmd;
             if (!dataaccesssservice.Started)
             {
-                cmd = new Command { Action = "", Parameter = 0 };
+                cmd = new Command { Id = "", Action = "", Parameter = 0 };
             }
             else
             {
-                cmd = GetCommand();
+                cmd = GetCommand(id);
             }
             if (cmd == null)
-                cmd = new Command { Action = "", Parameter = 0 };
+                cmd = new Command { Id = "", Action = "", Parameter = 0 };
             return Ok(cmd);
         }
 

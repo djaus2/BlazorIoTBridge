@@ -3,11 +3,34 @@
 @inject HttpClient client
 @inject IJSRuntime JSRuntime
 
+
 <h1>Commands</h1>
-<table>
-    <tr><td colspan="2"><button class="btn btn-primary" @onclick="DoCommand">Send Command:</button></td></tr>
-     <tr><td>Type Command:&nbsp;</td><td><input type="text" @onkeydown="@Enter" @bind="@command"/></td></tr>
-     <tr><td>Or Select Command:&nbsp;</td>
+<table style="width:100%;">
+	<col style="width:25%">
+	<col style="width:50%">
+    <col style="width:25%">
+    <tr><td><button class="btn btn-primary" @onclick="DoCommand">Send Command:</button></td></tr>
+    <tr><td>Enter Device Id as a Guid:&nbsp;</td><td colspan="2"><input type="text" style="width:320px;" @bind:event="oninput" @bind="@IdGuid"/></td></tr>
+    <tr><td><i>Or Select Device:&nbsp;</i></td>
+    <td colspan="2">
+        @if(@DeviceIds!= null)
+        {
+            @if (showmenu)
+            {
+                <select @onchange="OnSelectedId"  >
+                    <option value=""><i>Select</i></option>
+                        
+                    @foreach (var dev in DeviceIds)
+                    {
+                        <option value=@dev><b>@dev</b></option>
+                    }
+                </select>
+            }
+        }
+    </td></tr>
+     <tr><td>Enter Command:&nbsp;</td><td><input type="text" @onkeydown="@Enter" @bind="@command"/></td></tr>
+
+     <tr><td><i>Or Select Command:&nbsp;</i></td>
        <td>
            @if(@RegCmdz!= null)
             {
@@ -66,10 +89,12 @@
     bool run = true;
     string Response = "";
     List<Command> commands = null;
-    int iNull = (int)BlazorIoTBridge.Shared.Sensor.iNull;
+    int iNull = Sensor.iNull;
     string RegisteredCommands;
     List<string> RegCmdz = null;
     bool showmenu = true;
+    private string IdGuid = "";
+    List<Guid> DeviceIds = null;
 
     System.Threading.Timer timer;
 
@@ -127,6 +152,10 @@ public async Task Enter(KeyboardEventArgs e)
             await DoCommand();
         }
     }
+    async Task OnSelectedId(ChangeEventArgs e)
+    {
+        IdGuid = e.Value.ToString();
+    }
 
     private async Task DoCommand()
     {
@@ -134,12 +163,13 @@ public async Task Enter(KeyboardEventArgs e)
             return;
         Response = "Busy";
         int val;
-        BlazorIoTBridge.Shared.Command cmd;
+        Command cmd=null;
         if (command[0] == '*')
         {
             //Commands that require a parameter have a leading * in name.
+            command = command.Substring(1);
             if (int.TryParse(value, out val))
-                cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
+                cmd = new Command { Id = IdGuid, Action = command, Parameter = val };
             else
             {
                 await JSRuntime.InvokeVoidAsync("alert", new string[] { "Command requires a parameter" });
@@ -150,9 +180,9 @@ public async Task Enter(KeyboardEventArgs e)
         {
             // Some commands have an optional parameter 
             if (int.TryParse(value, out val))
-                cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
+                cmd = new Command { Id = IdGuid, Action = command, Parameter = val };
             else
-                cmd = new BlazorIoTBridge.Shared.Command { Action = command };
+                cmd = new Command { Id = IdGuid, Action = command };
         }
 		if (cmd != null)	
         {
@@ -202,10 +232,14 @@ public async Task Enter(KeyboardEventArgs e)
         var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommandsViaHub", cmd,null);
         RegisteredCommands = await response.Content.ReadAsStringAsync();
         RegCmdz = RegisteredCommands.Split(',').ToList<string>();
-        RegCmdz.Add("");
-        RegCmdz.Add("Send Telemetry direct to hub");
-        RegCmdz.Add("Send Telemetry via here");
+        //DeviceIds
+        var DeviceIdsArray = await client.GetFromJsonAsync<Guid[]>("Info");
+        DeviceIds = new List<Guid>(DeviceIdsArray);
+        if (DeviceIds != null)
+            if (DeviceIds.Count() == 1)
+                IdGuid = DeviceIds[0].ToString();
         StateHasChanged();
+
     }
 
 

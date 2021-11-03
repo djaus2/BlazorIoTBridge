@@ -29,13 +29,15 @@ using System.ComponentModel;
 namespace Serial2Blazor_app
 {
     /// <summary>
-    /// Get Csv list of commands from device and forward to BlazorIoTBridge.
+    /// At start, Get Csv list of commands from device and forward to BlazorIoTBridge.
     /// Or if simulating forward list from settings. See CommandsIfIsSimDevice
     /// Get telemetry from device or serial port, or simulate telemetry.
     /// Forward telemetry to IoT Hub direct from here (method in Client4Commands)  or via BlazorIoTBridge.
-    /// - Poll BlazorIoTBridge for commands direct from there.
-    /// - SetMethodDefaultHandler (in Client4Commands) as handler of Commands direct from Hub
-    /// For both of 2 above either send commands to device serially, or if simulating simulate here.
+    /// - Poll BlazorIoTBridge for commands direct from there. 
+    ///   These are commands sent directly from the bridge only, not via the hub.
+    /// - SetMethodDefaultHandler (in Client4Commands) as handler of Commands direct from Hub. 
+    ///   These are commands fwded from the bridge to the hub or from Azure IoT Explorer to the hub.
+    /// For both of 2 above either send commands to device serially, or if simulating simulate, run here.
     /// </summary>
     class Program
     {
@@ -59,13 +61,19 @@ namespace Serial2Blazor_app
         static string IOTHUB_DEVICE_CONN_STRING = "";
         static bool fwdTelemetrythruBlazorSvr = true;
 
+        static  string IdGuid = "";
+        static Guid GuidId = new Guid();
 
+        static Info info;
 
 
 
 
         static void Main(string[] args)
         {
+
+
+
             //[1] Load default settings
             var builder = new ConfigurationBuilder()
                             .SetBasePath(Directory.GetCurrentDirectory())
@@ -73,243 +81,314 @@ namespace Serial2Blazor_app
             IConfiguration configuration = builder.Build();
             Settings settings = configuration.GetSection("AppSettings").Get<Settings>();
 
-
-            // [2] Get user location of (saved) appsettings.json from above and load if it exists.
-            string userDir = settings.UserDir;
-            if (Directory.Exists(userDir))
-            {
-                if (File.Exists(Path.Combine(userDir, "appsettings.json")))
-                {
-                    var appsettings  = JsonConvert.DeserializeObject<App_Settings>(File.ReadAllText(@"c:\temp\\appsettings.json"));
-                    settings = appsettings.AppSettings;                
-                }
-            }
-
-            // Start without prompting if COM seetings are OK
-            auto = settings.Auto;
-
-            // Is device an actual Arduino or simuloated here?
-            IsRealDevice = settings.IsRealDevice;
-
-            // Forward telemetry via Blazor Svc or direct to hub from here
-            fwdTelemetrythruBlazorSvr = settings.FwdTelemetrythruBlazorSvr;
-
             //Blazor Svc
             _host = $@"{settings.Host}:{settings.Port}/";
 
-            delay = settings.Delay_Secs;
+            string Id = settings.Id;
+            string infoController = (settings.InfoController).Replace("Controller","");
 
-            // COM Settings
-            comport = settings.ComPort;
-            baudrate = settings.BaudRate;
-
-            InitialMessage = settings.InitialMessage;
-
-            // Create json packet for acks back to device
-            if (settings.ACK.Length > 0)
-                ACK = "{\"Action\":\"" + settings.ACK + "\"}";
-
-            ReadCommandsUrl = (settings.ReadCommandsController).Replace("Controller", "");
-            SensorApi = (settings.SensorController).Replace("Controller", "");
-
-            CommandsIfIsSimDevice = settings.CommandsIfIsSimDevice;
-            defaultTimeout = settings.defaultTimeout;
-
-            // Hub device connection string
-            IOTHUB_DEVICE_CONN_STRING = settings.IOTHUB_DEVICE_CONN_STRING;
-
-
-            Console.WriteLine("> \tHello IoT Nerd!");
-            // Get a list of serial port names.
-            string[] ports = SerialPort.GetPortNames();
-            var lst = new List<string>(ports);
-
-            // Skip COM settings input if Auto mode, COM port is valid and is real device.
-            if (((!auto) || (!lst.Contains(comport))) && (IsRealDevice))
-            {
-                if (!lst.Contains(comport))
-                    comport = "";
-                Console.WriteLine("> \tThe following serial ports were found:");
-                // Display each port name to the console.
-                foreach (string _port in ports)
-                {
-                    Console.WriteLine(_port);
-                }
-
-                string port = "";
-                bool contin;
-                do
-                {
-                    Console.WriteLine("If USB cable is NOT inserted, insert now.");
-                    if (comport == "")
-                        Console.Write($"> \tCOM Port/Port no: (No default) ");
-                    else
-                        Console.Write($"> \tCOM Port/Port no: (Default {comport}) ");
-
-                    port = Console.ReadLine();
-                    ports = SerialPort.GetPortNames();
-                    lst = new List<string>(ports);
-                    //Alllow for just the port number
-                    if (port.Length == 1)
-                        port = "COM" + port;
-                    // Can just press return for defaults.
-                    if ((string.IsNullOrEmpty(port)) && (comport != ""))
-                        contin = false;
-                    else
-                        contin = !lst.Contains(port);
-                } while (contin);
-
-                if (!string.IsNullOrEmpty(port))
-                    comport = port;
-                settings.ComPort = comport;
-                Console.Write($"> \tbaudrate: (Default: {baudrate}) ");
-                string newbaudrate = Console.ReadLine();
-                if (!string.IsNullOrEmpty(newbaudrate))
-                {
-                    if (!int.TryParse(newbaudrate, out baudrate))
-                        baudrate = settings.BaudRate;
-                }
-                settings.BaudRate = baudrate;
-
-                Console.Write($"> \tTime (in sec) between reads: (Default:{delay}) ");
-                string secs = Console.ReadLine();
-                if (!int.TryParse(secs, out delay))
-                {
-                    delay = settings.Delay_Secs;
-                }
-                settings.Delay_Secs = delay;
-
-                Console.Write($@"> Blazor Server URL:Port: (Default:{_host} ) ");
-                string newhost = Console.ReadLine();
-                if (!string.IsNullOrEmpty(newhost))
-                {
-                    _host = newhost;
-                    string[] parts = _host.Split(":");
-                    if (parts.Length == 2)
-                    {
-                        if (uint.TryParse(parts[1], out uint p))
-                        {
-                            settings.Host = parts[0];
-                            settings.Port = p;
-                        }
-                    }
-                }
-                Console.Write($"Save user settings to {userDir}? [Y/N]");
-                string yesno = Console.ReadLine();
-                if (!string.IsNullOrEmpty(yesno))
-                {
-                    if (yesno.ToUpper()[0] == 'Y')
-                    {
-                        if (Directory.Exists(userDir))
-                        {
-                            App_Settings appsettings = new App_Settings { AppSettings = settings };
-                            File.WriteAllText(Path.Combine(userDir, "appsettings.json"), JsonConvert.SerializeObject(appsettings));// This overwrites
-                        }
-                    }
-                }
-            }
-
+            Guid GuidId = new Guid(Id);
+            using var client = new System.Net.Http.HttpClient();
+            client.BaseAddress = new Uri(_host);
+            IsRealDevice = settings.IsRealDevice;
             if (IsRealDevice)
             {
+                Console.WriteLine("");
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.BackgroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("> \tPlease remove and reinsert the USB cable NOW ... then ...");
+                Console.WriteLine(" \tPlease remove and reinsert the USB cable NOW ... then wait for settings.");
                 Console.ResetColor();
-                Console.WriteLine("> \tNb: It needs to be in at start.");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine(" \tNb: It needs to be in at start.");
             }
-            Console.WriteLine();
-            if (!fwdTelemetrythruBlazorSvr)
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Telemetry send mode set to direct to hub.");
-            }
-            else 
-            {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("Telemetry send mode set to via BlazorIoTBridge.");
-            }
-            Console.ResetColor();
-            Console.WriteLine();
+            Console.WriteLine("");
 
-            if (_host[_host.Length - 1] != '/')
-                _host += "/";
-            isFirstRead = true;
-            // Create a new SerialPort on port COM7
-
-            Console.Write("> \tPress [Enter] when web app is ready.");
-            Console.ReadLine();
-            if (IsRealDevice)
+            //Console.ForegroundColor = ConsoleColor.Red;
+            //Console.BackgroundColor = ConsoleColor.Yellow;
+            //Console.Write("\tPlease press [Enter] when the Blazor IoT Bridge web app is up. ");
+            //Console.ResetColor();
+            //Console.ReadLine();
+            bool found = false;
+            int count = 0;
+            do
             {
-                _serialPort = new SerialPort(comport, baudrate);
-                // Set the read/write timeouts
-                _serialPort.ReadTimeout = settings.ReadTimeout;
-                _serialPort.WriteTimeout = settings.WriteTimeout;
-                while (!_serialPort.IsOpen)
+                Thread.Sleep(1000);
+                try
                 {
-                    try
+                    info = client.GetFromJsonAsync<Info>($"{infoController }/{Id}", null).GetAwaiter().GetResult();
+                    if (info == null)
                     {
-                        _serialPort.Open();
+                        found = false;
                     }
-                    catch (Exception)
-                    {
-                        Console.WriteLine("> \tSerial Port {0} didn't open. Please check..", comport);
-                        Thread.Sleep(1000);
-                    }
+                    else
+                        found = true;
                 }
-            }
-
-            bool ready = true;
-            if (IsRealDevice)
-            {
-                ready = _serialPort.IsOpen;
-            }
-
-            if (ready)
-            {
-                if (IsRealDevice)
-                    Console.WriteLine("> \tOpened the Serial Port {0}.", comport);
-                else
-                    Console.WriteLine("> \tRunning app as device simulator.");
-                //if (_serialPort.BytesToRead != 0)
-                //    _serialPort.DiscardInBuffer();
-
-                // Console.Write("Press enter when Server is up.");
-                //Console.ReadLine();
-                Console.WriteLine();
-                Console.WriteLine("> \tUse Azure IoT Explorer to display Telemetry sent:");
-                Console.WriteLine("> \thttps:////docs.microsoft.com//en-us//azure//iot-fundamentals//howto-use-iot-explorer");
-                Console.WriteLine();
-                bool cont = true;
-                if (IsRealDevice)
+                catch (Exception)
                 {
-                    IsFirstSerialRead = true;
-
+                    found = false;
                 }
-                FirstRecv = true;
-
-                while (cont)
+                if (!found)
                 {
-                    if (IsRealDevice)
+                    if (count == 0)
                     {
-                        Task t3 = Task.Run(() => Signal());
-                        Task t4 = Task.Run(() => Read());
-                        t3.Wait();
-                        t4.Wait();
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write("Waiting for settings from the Azure IoT Bridge: ");
+                        Console.ResetColor();
                     }
                     else
                     {
-                        Task t5 = Task.Run(() => Signal());
-                        Task t6 = Task.Run(() => SimSensor());
-                        t5.Wait();
-                        t6.Wait();
+                        if (count % 20 == 0)
+                            Console.WriteLine();
+                        if (count % 2 == 0)
+                            Console.Write('/');
+                        else
+                            Console.Write('\\');
                     }
+                    count++;
                 }
-                _serialPort.Close();
+            } while (!found);
+            if (!found)
+            {
+                //Console.ForegroundColor = ConsoleColor.Red;
+                //Console.WriteLine("Device not registered.");
+                //Console.ForegroundColor = ConsoleColor.DarkGreen;
+                //Console.Write("Press enter to exit this app.");
+                //Console.ResetColor();
+                //Console.ReadLine();
             }
             else
-                Console.WriteLine("Serial port {0} failed to open.", comport);
+            {
+                Console.WriteLine();
+                Console.WriteLine("Got settings");
+                Console.ReadLine();
+                // [2] Get user location of (saved) appsettings.json from above and load if it exists.
+                string userDir = settings.UserDir;
+                if (Directory.Exists(userDir))
+                {
+                    if (File.Exists(Path.Combine(userDir, "appsettings.json")))
+                    {
+                        var appsettings = JsonConvert.DeserializeObject<App_Settings>(File.ReadAllText(@"c:\temp\\appsettings.json"));
+                        settings = appsettings.AppSettings;
+                    }
+                }
+
+                // Start without prompting if COM seetings are OK
+                auto = settings.Auto;
+
+                // Is device an actual Arduino or simuloated here?
+                IsRealDevice = settings.IsRealDevice;
+
+                // Forward telemetry via Blazor Svc or direct to hub from here
+                fwdTelemetrythruBlazorSvr = settings.FwdTelemetrythruBlazorSvr;
+
+
+
+                delay = settings.Delay_Secs;
+
+                // COM Settings
+                comport = settings.ComPort;
+                baudrate = settings.BaudRate;
+
+                InitialMessage = settings.InitialMessage;
+
+                // Create json packet for acks back to device
+                if (settings.ACK.Length > 0)
+                    ACK = "{\"Action\":\"" + settings.ACK + "\"}";
+
+                ReadCommandsUrl = (settings.ReadCommandsController).Replace("Controller", "");
+                SensorApi = (settings.SensorController).Replace("Controller", "");
+
+                CommandsIfIsSimDevice = settings.CommandsIfIsSimDevice;
+                defaultTimeout = settings.defaultTimeout;
+
+                // Hub device connection string
+                IOTHUB_DEVICE_CONN_STRING = info.IOTHUB_DEVICE_CONN_STRING;
+
+
+                Console.WriteLine("> \tHello IoT Nerd!");
+                // Get a list of serial port names.
+                string[] ports = SerialPort.GetPortNames();
+                var lst = new List<string>(ports);
+
+                // Skip COM settings input if Auto mode, COM port is valid and is real device.
+                if (((!auto) || (!lst.Contains(comport))) && (IsRealDevice))
+                {
+                    if (!lst.Contains(comport))
+                        comport = "";
+                    Console.WriteLine("> \tThe following serial ports were found:");
+                    // Display each port name to the console.
+                    foreach (string _port in ports)
+                    {
+                        Console.WriteLine(_port);
+                    }
+
+                    string port = "";
+                    bool contin;
+                    do
+                    {
+                        Console.WriteLine("If USB cable is NOT inserted, insert now.");
+                        if (comport == "")
+                            Console.Write($"> \tCOM Port/Port no: (No default) ");
+                        else
+                            Console.Write($"> \tCOM Port/Port no: (Default {comport}) ");
+
+                        port = Console.ReadLine();
+                        ports = SerialPort.GetPortNames();
+                        lst = new List<string>(ports);
+                        //Alllow for just the port number
+                        if (port.Length == 1)
+                            port = "COM" + port;
+                        // Can just press return for defaults.
+                        if ((string.IsNullOrEmpty(port)) && (comport != ""))
+                            contin = false;
+                        else
+                            contin = !lst.Contains(port);
+                    } while (contin);
+
+                    if (!string.IsNullOrEmpty(port))
+                        comport = port;
+                    settings.ComPort = comport;
+                    Console.Write($"> \tbaudrate: (Default: {baudrate}) ");
+                    string newbaudrate = Console.ReadLine();
+                    if (!string.IsNullOrEmpty(newbaudrate))
+                    {
+                        if (!int.TryParse(newbaudrate, out baudrate))
+                            baudrate = settings.BaudRate;
+                    }
+                    settings.BaudRate = baudrate;
+
+                    Console.Write($"> \tTime (in sec) between reads: (Default:{delay}) ");
+                    string secs = Console.ReadLine();
+                    if (!int.TryParse(secs, out delay))
+                    {
+                        delay = settings.Delay_Secs;
+                    }
+                    settings.Delay_Secs = delay;
+
+                    Console.Write($@"> Blazor Server URL:Port: (Default:{_host} ) ");
+                    string newhost = Console.ReadLine();
+                    if (!string.IsNullOrEmpty(newhost))
+                    {
+                        _host = newhost;
+                        string[] parts = _host.Split(":");
+                        if (parts.Length == 2)
+                        {
+                            if (uint.TryParse(parts[1], out uint p))
+                            {
+                                settings.Host = parts[0];
+                                settings.Port = p;
+                            }
+                        }
+                    }
+                    Console.Write($"Save user settings to {userDir}? [Y/N]");
+                    string yesno = Console.ReadLine();
+                    if (!string.IsNullOrEmpty(yesno))
+                    {
+                        if (yesno.ToUpper()[0] == 'Y')
+                        {
+                            if (Directory.Exists(userDir))
+                            {
+                                App_Settings appsettings = new App_Settings { AppSettings = settings };
+                                File.WriteAllText(Path.Combine(userDir, "appsettings.json"), JsonConvert.SerializeObject(appsettings));// This overwrites
+                            }
+                        }
+                    }
+                }
+
+;
+                if (!fwdTelemetrythruBlazorSvr)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("Telemetry send mode set to direct to hub.");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("Telemetry send mode set to via BlazorIoTBridge.");
+                }
+                Console.ResetColor();
+                Console.WriteLine();
+
+                if (_host[_host.Length - 1] != '/')
+                    _host += "/";
+                isFirstRead = true;
+                // Create a new SerialPort on port COM7
+
+
+                if (IsRealDevice)
+                {
+                    _serialPort = new SerialPort(comport, baudrate);
+                    // Set the read/write timeouts
+                    _serialPort.ReadTimeout = settings.ReadTimeout;
+                    _serialPort.WriteTimeout = settings.WriteTimeout;
+                    while (!_serialPort.IsOpen)
+                    {
+                        try
+                        {
+                            _serialPort.Open();
+                        }
+                        catch (Exception)
+                        {
+                            Console.WriteLine("> \tSerial Port {0} didn't open. Please check..", comport);
+                            Thread.Sleep(1000);
+                        }
+                    }
+                }
+
+                bool ready = true;
+                if (IsRealDevice)
+                {
+                    ready = _serialPort.IsOpen;
+                }
+
+                if (ready)
+                {
+                    if (IsRealDevice)
+                        Console.WriteLine("> \tOpened the Serial Port {0}.", comport);
+                    else
+                        Console.WriteLine("> \tRunning app as device simulator.");
+                    //if (_serialPort.BytesToRead != 0)
+                    //    _serialPort.DiscardInBuffer();
+
+                    // Console.Write("Press enter when Server is up.");
+                    //Console.ReadLine();
+                    Console.WriteLine();
+                    Console.WriteLine("> \tUse Azure IoT Explorer to display Telemetry sent:");
+                    Console.WriteLine("> \thttps:////docs.microsoft.com//en-us//azure//iot-fundamentals//howto-use-iot-explorer");
+                    Console.WriteLine();
+                    bool cont = true;
+                    if (IsRealDevice)
+                    {
+                        IsFirstSerialRead = true;
+
+                    }
+                    FirstRecv = true;
+
+                    while (cont)
+                    {
+                        if (IsRealDevice)
+                        {
+                            Task t3 = Task.Run(() => Signal());
+                            Task t4 = Task.Run(() => Read());
+                            t3.Wait();
+                            t4.Wait();
+                        }
+                        else
+                        {
+                            Task t5 = Task.Run(() => Signal());
+                            Task t6 = Task.Run(() => SimSensor());
+                            t5.Wait();
+                            t6.Wait();
+                        }
+                    }
+                    _serialPort.Close();
+                }
+                else
+                    Console.WriteLine("Serial port {0} failed to open.", comport);
+            }
         }
 
+        private static int Id = 8; //"6513d5-c0f2-4346-b3fa-642c48fd66a5";
 
         /// <summary>
         /// Watch for Commands, sent from Hub via Blazor Svc
@@ -338,7 +417,7 @@ namespace Serial2Blazor_app
                     //See if a new command has been sent
                     using var client = new System.Net.Http.HttpClient();
                     client.BaseAddress = new Uri(_host);
-                    Command _command = await client.GetFromJsonAsync<Command>(ReadCommandsUrl, null);
+                    Command _command = await client.GetFromJsonAsync<Command>($"{ReadCommandsUrl}/{GuidId}", null);
                     if (!IsRealDevice && isFirstRead)
                     {
                         isFirstRead = false;
@@ -346,7 +425,7 @@ namespace Serial2Blazor_app
                     }
                     cmd = JsonConvert.SerializeObject(_command);
                     string cd = _command.Action;
-                    if (cd != null)
+                    if (!string.IsNullOrEmpty(cd))
                     {
                         cmd = cmd.Trim(); //.ToUpper();
                         if (!string.IsNullOrEmpty(cmd))
@@ -602,7 +681,7 @@ namespace Serial2Blazor_app
         
         public static async Task Read()
         {
-
+ 
             Monitor.Enter(_serialPort);
             _serialPort.WriteLine("RESET");
             // Wait for it
@@ -610,6 +689,7 @@ namespace Serial2Blazor_app
             // Device expects an initial char to complete SetUp()
             _serialPort.Write("*");
             Monitor.Exit(_serialPort);
+            Console.WriteLine("Device has been reset");
             while (true)
             {
 
@@ -626,6 +706,19 @@ namespace Serial2Blazor_app
                         if (IsFirstSerialRead)
                         {
                             IsFirstSerialRead = false;
+                            continue;
+                        }
+                        else if (sensor[0] == '=')
+                        {
+                            if (sensor.Length == 36+2)
+                            {
+                                IdGuid = sensor.Substring(2);
+                                if (!Guid.TryParse(IdGuid, out GuidId))
+                                {
+                                    GuidId = new Guid();
+                                    IdGuid = "";
+                                }
+                            }
                             continue;
                         }
                         else if (sensor[0] == '~')
@@ -729,7 +822,7 @@ namespace Serial2Blazor_app
                 else
                 {
                     // Forwading direc to the hub.
-                    bool res = await Client4Commands.StartSendDeviceToCloudMessageAsync(sensor);
+                    bool res = await Client4Commands.StartSendDeviceToCloudMessageAsync(sensor, info.IOTHUB_DEVICE_CONN_STRING);
                     if (res)
                         Console.Write(" Sent: ");
                     else
@@ -742,10 +835,11 @@ namespace Serial2Blazor_app
             }
         }
 
-
+        public static string CommandsCsv;
 
         public static async Task SendCommands(string commands)
         {
+            CommandsCsv = commands;
             using var client = new System.Net.Http.HttpClient();
 
             var content = new StringContent(commands);
@@ -755,7 +849,12 @@ namespace Serial2Blazor_app
                 // Note no "api/Sensor" but just "Sensor" in next LOC!:
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.Write("\tSending Commands ... ");
-                List<string> cmds = new List<string>(commands.Split(','));
+                List<string> cmds;
+                if (string.IsNullOrEmpty(IdGuid))
+                    cmds = new List<string>(commands.Split(','));
+                else
+                    // Stck the Guid as a command at start.
+                    cmds = new List<string>((IdGuid+','+commands).Split(','));
                 var response = await client.PostAsJsonAsync<List<string>>("CommandsViaHub", cmds, null);
                 Console.Write(" Sent: ");
                 if (response.IsSuccessStatusCode)
@@ -783,29 +882,57 @@ namespace Serial2Blazor_app
 
         static async Task DoCommand(string action, int value)
         {
-            Command _command = new Command{ Action = action, Invoke = false, Parameter = value };
-            string cmd = JsonConvert.SerializeObject(_command);
-
-            //Forward serially
-
-            Monitor.Enter(_serialPort);
-            _serialPort.WriteLine(cmd);
-            Monitor.Exit(_serialPort);
-
-
-            if ((_command.Parameter != null) && (_command.Parameter != (int)Sensor.iNull))
+            string[] cmds = CommandsCsv.Split(',');
+            List<string> cmdsList = new List<string>(cmds);
+            bool included = cmdsList.Contains(action);
+            //The CSV list of commands has * prefix for commands that require a parameter.
+            //Some coomands taht get to here have it removed, some don't
+            if (!included)
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\n> \tCommand sent: {0} Parameter: {1}.\n", _command.Action, _command.Parameter);
-                Console.ForegroundColor = ConsoleColor.White;
+                if (cmdsList.Contains("*" + action))
+                {
+                    //action = "*" + action;
+                    included = true;
+                }
+            }
+            if (true)
+            {
+                //Arduino looks for no *
+                if (action[0] == '*')
+                {
+                    action = action.Substring(1);
+                }
+                Command _command = new Command { Action = action, Invoke = false, Parameter = value };
+                string cmd = JsonConvert.SerializeObject(_command);
+                cmd = cmd.Replace("\"Id\":null,", "");
+
+                //Forward serially
+
+                Monitor.Enter(_serialPort);
+                _serialPort.WriteLine(cmd);
+                Monitor.Exit(_serialPort);
+
+
+                if ((_command.Parameter != null) && (_command.Parameter != Sensor.iNull))
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("\n> \tCommand sent: {0} Parameter: {1}.\n", _command.Action, _command.Parameter);
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine("\n> \tCommand sent: {0}  No parameter.\n", _command.Action);
+                    Console.ForegroundColor = ConsoleColor.White;
+                }
+                await Task.Delay(1);
             }
             else
             {
-                Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine("\n> \tCommand sent: {0}  No parameter.\n", _command.Action);
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\n> \tInvalid Command: \"{0}\" sent.", action);
                 Console.ForegroundColor = ConsoleColor.White;
             }
-            await Task.Delay(1);
 
         }
     }
@@ -818,6 +945,10 @@ namespace Serial2Blazor_app
     public class Settings
     {
         public string UserDir { get; set; } 
+
+        public string Id { get; set; }
+
+        public string InfoController { get; set; }
 
         public bool FwdTelemetrythruBlazorSvr { get; set; }
         public bool Auto { get; set; }
@@ -839,8 +970,6 @@ namespace Serial2Blazor_app
         public string CommandsIfIsSimDevice { get; set; }
 
         public int defaultTimeout { get; set; }
-
-        public string IOTHUB_DEVICE_CONN_STRING { get; set; }
     }
 
 

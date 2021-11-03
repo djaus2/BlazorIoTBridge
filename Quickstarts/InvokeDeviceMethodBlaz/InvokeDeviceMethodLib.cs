@@ -56,11 +56,10 @@ namespace InvokeDeviceMethod
 
             if (command[0] == '*')
             {
-                string inullStrn = ((int)Sensor.iNull).ToString();
                 if (
                     (string.IsNullOrEmpty(payload)) ||
                     (payload == "null") ||
-                    (payload == inullStrn)
+                    (payload == Sensor.NULL)
                     )
                     return -1;
                 command = command.Substring(1);

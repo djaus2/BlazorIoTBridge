@@ -22,7 +22,7 @@ using System.IO;
 
 
 using System.Net.Http;
-//using System.Net.Http.Json;
+
 
 using BlazorIoTBridge.SharedDNC;
 
@@ -43,7 +43,8 @@ namespace ReadD2cMessagesBlaz
         static string  connectionString = "";
         static string Hub = "";
         static string EventHubName = "";
-        static int StartTimeStamp = 0;
+        static Int64 StartTimeStamp = 0;
+        static Info info;
         private static long lastTS { get; set; } = 637687876439860000;
 
         public static async Task Main(string[] args)
@@ -57,34 +58,110 @@ namespace ReadD2cMessagesBlaz
             Settings settings = configuration.GetSection("AppSettings").Get<Settings>();
 
             _host = $@"{settings.Host}:{settings.Port}/";
-            connectionString = settings.EVENT_HUBS_CONNECTION_STRING;
-            Hub = settings.Hub;
-            EventHubName = ""; // settings.EVENT_HUBS_COMPATIBILITY_PATH;
 
+            string Id = settings.Id;
+            string infoController = (settings.InfoController).Replace("Controller", "");
 
-            Console.WriteLine("IoT Hub Quickstarts - Read device to cloud messages. Ctrl-C to exit.\n");
+            Guid GuidId = new Guid(Id);
+            using var client = new System.Net.Http.HttpClient();
+            client.BaseAddress = new Uri(_host);
 
-            // Set up a way for the user to gracefully shutdown
-            using var cts = new CancellationTokenSource();
-            Console.CancelKeyPress += (sender, eventArgs) =>
+            //Console.ForegroundColor = ConsoleColor.DarkCyan;
+            //Console.Write("Press enter when the web app is up. ");
+            //Console.ResetColor();
+            //Console.ReadLine();
+            info = new Info();
+            string json;
+            bool found = false;
+            int count = 0;
+            do
             {
-                eventArgs.Cancel = true;
-                cts.Cancel();
-                Console.WriteLine("Exiting...");
-            };
+                Thread.Sleep(1000);
+                try
+                {
+                    //info = client.GetFromJsonAsync<Info>($"{infoController }/{Id}", null).GetAwaiter().GetResult();
+                    var res = client.GetAsync($"{infoController }/{Id}").GetAwaiter().GetResult();
 
-            // 0 means show all
-            // -1 means only show from start of app
-            // Otherwise can set a specific time by usings its DateTime.Ticks property
-            StartTimeStamp = settings.StartTimeStamp;
-            if (StartTimeStamp < 0)
-                lastTS = DateTime.Now.ToUniversalTime().Ticks;
+                    if (res.IsSuccessStatusCode)
+                    {
+                        json = res.Content.ReadAsStringAsync().GetAwaiter().GetResult(); //.ReadFromJsonAsync<Info>>();
+                        info = JsonConvert.DeserializeObject<Info>(json);
+                        found = true;
+                    }
+                    else
+                    if (info == null)
+                    {
+                        found = false;
+                    }
+                }
+                catch (Exception)
+                {
+                    found = false;
+                }
+                if (!found)
+                {
+                    if (count == 0)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write("Waiting for settings from the Azure IoT Bridge: ");
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        if (count % 20 ==0 )
+                            Console.WriteLine();
+                        if (count % 2 == 0)
+                            Console.Write('/');
+                        else
+                            Console.Write('\\');
+                    }
+                    count++;
+                }
+            } while (!found);
+            Console.WriteLine();
+            Console.WriteLine("Got Settings");
+            if (!found)
+            {
+                //Console.ForegroundColor = ConsoleColor.Red;
+                //Console.WriteLine("Device not registered.");
+                //Console.ForegroundColor = ConsoleColor.DarkGreen;
+                //Console.Write("Press enter to exit this app.");
+                //Console.ResetColor();
+                //Console.ReadLine();
+            }
             else
-                lastTS = StartTimeStamp;
-            // Run the sample
-            await ReceiveMessagesFromDeviceAsync(cts.Token);
+            {
+                connectionString = info.EVENT_HUBS_CONNECTION_STRING;
+                Hub = info.HUB_NAME;
+                EventHubName = ""; // settings.EVENT_HUBS_COMPATIBILITY_PATH;
 
-            Console.WriteLine("Cloud message reader finished.");
+                Console.ForegroundColor = ConsoleColor.Blue;
+                Console.WriteLine("IoT Hub - Read device to cloud messages. Ctrl-C to exit.\n");
+                Console.ResetColor();
+
+                // Set up a way for the user to gracefully shutdown
+                using var cts = new CancellationTokenSource();
+                Console.CancelKeyPress += (sender, eventArgs) =>
+                {
+                    eventArgs.Cancel = true;
+                    cts.Cancel();
+                    Console.WriteLine("Exiting...");
+                };
+
+                // 0 means show all
+                // -1 means only show from start of app
+                // Otherwise can set a specific time by usings its DateTime.Ticks property
+                StartTimeStamp = settings.StartTimeStamp;
+                if (StartTimeStamp < 0)
+                    lastTS = DateTime.Now.ToUniversalTime().Ticks;
+                else
+                    lastTS = StartTimeStamp;
+                // Run the sample
+                await ReceiveMessagesFromDeviceAsync(cts.Token);
+
+                Console.WriteLine("Cloud message reader finished.");
+                ;
+            }
         }
 
         static dynamic msg;

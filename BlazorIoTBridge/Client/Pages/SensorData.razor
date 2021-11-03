@@ -287,7 +287,7 @@ else
                             break;
                         case SensorType.sswitch:
                             var val = random.NextDouble() * 10;
-                            Sensor.Value = Sensor.iNull;
+                            Sensor.Value = Sensor.dNull;
                             Sensor.State = (val > 5.0);
                             break;
                     }
@@ -301,7 +301,7 @@ else
                     {
 
                         case SensorType.accelerometer:
-                            Sensor.Value = -Sensor.iNull; //Acts as null
+                            Sensor.Value = -Sensor.dNull; //Acts as null
                             maximum = 10;
                             minimum = 0;
                             val1 = random.NextDouble() * (maximum - minimum) + minimum;
@@ -310,7 +310,7 @@ else
                             Sensor.Values = new List<double> { val1, val2, val3 };
                             break;
                         case SensorType.environment:
-                            Sensor.Value = Sensor.iNull; // Acts as null
+                            Sensor.Value = Sensor.dNull; // Acts as null
                             maximum = 30;
                             val1 = random.NextDouble() * (maximum - minimum) + minimum;
                             maximum = 870;

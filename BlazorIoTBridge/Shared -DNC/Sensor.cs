@@ -11,7 +11,9 @@ namespace BlazorIoTBridge.SharedDNC
 
     public class Sensor
     {
-        public const double iNull = (double) int.MinValue;
+        public const int iNull = -1; // int.MinValue;
+        public static double dNull = (double)iNull;
+        public static string NULL = iNull.ToString();
 
         public delegate Task CommandCallback(string command, int parameter);
 
@@ -20,7 +22,7 @@ namespace BlazorIoTBridge.SharedDNC
         public static int Count { get; set; } = 0;
         public int No { get; set; }
         public string Id { get; set; }
-        public double? Value { get; set; } = Sensor.iNull; // Signals null
+        public double? Value { get; set; } = Sensor.dNull; // Signals null
 
         //public int TemperatureF => 32 + (int)(Value / 0.5556);
 

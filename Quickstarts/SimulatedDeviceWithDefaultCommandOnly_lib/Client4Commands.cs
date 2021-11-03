@@ -66,12 +66,12 @@ namespace SimulatedDeviceWithDefaultCommandOnly
         /// Sends a single message.
         /// Called by SensorController-Post
         /// </summary>
-        public static async Task<bool> StartSendDeviceToCloudMessageAsync(Sensor Sensor)
+        public static async Task<bool> StartSendDeviceToCloudMessageAsync(Sensor Sensor, string deviceConnectionString)
         {
             System.Diagnostics.Debug.WriteLine("===== SendDeviceToCloudMessageAsync In =====");
             var messageString = JsonConvert.SerializeObject(Sensor);
             var message = new Message(Encoding.ASCII.GetBytes(messageString));
-            s_connectionString = "HostName=PnPHub4.azure-devices.net;DeviceId=PnPDev4;SharedAccessKey=EHU9AXAaVtmYknqqzp6HFIrhZhTbtIhpoTSFxVAm5GM=";
+            s_connectionString = deviceConnectionString;// "HostName=PnPHub4.azure-devices.net;DeviceId=PnPDev4;SharedAccessKey=EHU9AXAaVtmYknqqzp6HFIrhZhTbtIhpoTSFxVAm5GM=";
             if (s_deviceClient == null)
                 s_deviceClient = DeviceClient.CreateFromConnectionString(s_connectionString, s_transportType);
 
@@ -102,10 +102,10 @@ namespace SimulatedDeviceWithDefaultCommandOnly
 
         static string CommandNamesCsv = "";
 
-        public static async Task Main(string[] args, Sensor.CommandCallback cb)
+        public static async Task Main(string[] args, Sensor.CommandCallback cb, string deviceConnectionString = "")
         {
-
-            s_connectionString = "HostName=PnPHub4.azure-devices.net;DeviceId=PnPDev4;SharedAccessKey=EHU9AXAaVtmYknqqzp6HFIrhZhTbtIhpoTSFxVAm5GM=";
+            if (deviceConnectionString != "")
+            s_connectionString = deviceConnectionString; // "HostName=PnPHub4.azure-devices.net;DeviceId=PnPDev4;SharedAccessKey=EHU9AXAaVtmYknqqzp6HFIrhZhTbtIhpoTSFxVAm5GM=";
             //  "HostName=PnPHub4.azure-devices.net;DeviceId=PnPDev4;SharedAccessKey=EHU9AXAaVtmYknqqzp6HFIrhZhTbtIhpoTSFxVAm5GM=",
 
             string _host = "";
@@ -216,7 +216,7 @@ namespace SimulatedDeviceWithDefaultCommandOnly
                             if (
                                 (!string.IsNullOrEmpty(data)) &&
                                 (data != "null") &&
-                                (data != "-2147483648") &&
+                                (data != Sensor.NULL) &&
                                 (int.TryParse(data, out int param))
                                 )
                                 {
@@ -224,10 +224,10 @@ namespace SimulatedDeviceWithDefaultCommandOnly
 
                                 }
                             else
-                                await CallBack.Invoke(methodRequest.Name, -2147483648);
+                                await CallBack.Invoke(methodRequest.Name, Sensor.iNull);
                         }
                         else
-                            await CallBack.Invoke(methodRequest.Name, -2147483648);
+                            await CallBack.Invoke(methodRequest.Name, Sensor.iNull);
                         return await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(cmd1), 200));
                     }
                     string result = "{\"result\":\"CallBack not assigned - {" + methodRequest.Name + "}\"}";
@@ -244,7 +244,7 @@ namespace SimulatedDeviceWithDefaultCommandOnly
                             if (
                                 (!string.IsNullOrEmpty(data)) &&
                                 (data != "null") &&
-                                (data != "-2147483648") &&
+                                (data != Sensor.NULL) &&
                                 (int.TryParse(data, out int param))
                                 )
                             {
@@ -343,7 +343,7 @@ namespace SimulatedDeviceWithDefaultCommandOnly
                         if (
                             (!string.IsNullOrEmpty(data)) &&
                             (data != "null") &&
-                            (data != "-2147483648") &&
+                            (data != Sensor.NULL) &&
                             (int.TryParse(data, out int param))
                         )
                         {
@@ -354,7 +354,7 @@ namespace SimulatedDeviceWithDefaultCommandOnly
                         
                     if ((!done) && (methodRequest.Name.ToUpper() != "RATE"))
                     {
-                        await cb.Invoke(methodRequest.Name, (int)Sensor.iNull);
+                        await cb.Invoke(methodRequest.Name, Sensor.iNull);
                         done = true;
                     }
                 }
@@ -434,7 +434,7 @@ namespace SimulatedDeviceWithDefaultCommandOnly
                             if (Callbacks.Keys.Contains(methodRequest.Name))
                             {
                                 Sensor.CommandCallback cb = Callbacks[methodRequest.Name];
-                                await cb.Invoke(methodRequest.Name, (int)Sensor.iNull);
+                                await cb.Invoke(methodRequest.Name, Sensor.iNull);
                                 System.Diagnostics.Debug.WriteLine("Not Done {0}", cmd);
                                 return;
                             }

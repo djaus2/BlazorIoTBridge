@@ -10,6 +10,8 @@ using System.Linq;
 using BlazorIoTBridge.Shared;
 using BlazorIoTBridge.Server.Data;
 using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Sqlite;
 
 namespace BlazorIoTBridge.Server
 {
@@ -48,6 +50,8 @@ namespace BlazorIoTBridge.Server
 
             services.AddSingleton<IConfiguration>(Configuration);
             services.AddSingleton<IDataAccessService,DataAccessService>();
+            var asdf = Configuration.GetConnectionString("DefaultConnection");
+            services.AddDbContext<ApplicationDBContext>(options => options.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
 
             //services.AddSingleton (IAppSettings,AppSettings)
 

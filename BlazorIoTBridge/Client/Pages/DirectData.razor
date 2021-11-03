@@ -206,12 +206,12 @@ else
         //StateHasChanged();
         if (_Sensor.SensorType == SensorType.accelerometer) 
         {
-            _Sensor.Value = Sensor.iNull;
+            _Sensor.Value = Sensor.dNull;
             _Sensor.Values = new List<double> { (double)value1, (double)value2, (double)value3 };
         }
         else if (_Sensor.SensorType == SensorType.environment)
         {
-            _Sensor.Value = Sensor.iNull;
+            _Sensor.Value = Sensor.dNull;
             _Sensor.environ = new Environ { Temperature =(double)value1, Humidity =  (double)value2, Pressure = (double)value3 };
         }
         Guid guid = Guid.NewGuid();

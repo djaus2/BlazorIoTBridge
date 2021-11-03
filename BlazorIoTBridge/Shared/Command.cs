@@ -8,8 +8,9 @@ namespace BlazorIoTBridge.Shared
 {
     public class Command
     {
+        public string Id { get; set; }
         public string Action { get; set; }
-        public int? Parameter { get; set; } = (int)Sensor.iNull; //Used to represent null
+        public int? Parameter { get; set; } = Sensor.iNull; //Used to represent null
         public bool Invoke { get; set; } = false;
     }
 

@@ -1,6 +1,8 @@
 ﻿@page "/settings"
-
+@using BlazorIoTBridge.Shared
 @using System.IO;
+@using Newtonsoft.Json
+@inject HttpClient client
 @inject IJSRuntime JSRuntime
 
 <h1>Hello, world!</h1>
@@ -12,66 +14,74 @@ Welcome to your new app.
 
 
 
- 
-<EditForm Model="model">
-<table width="100%" border="0">
+ @if (model != null)
+{
+    <EditForm Model="model">
+        <table width="100%" border="0">
 
-<HubValue @bind-BindingValue="model.DeviceGuid" PropertyName="DeviceGuid"  />
-<HubValue @bind-BindingValue="model.IOTHUB_DEVICE_CONN_STRING"  PropertyName="IOTHUB_DEVICE_CONN_STRING"  />
-<HubValue @bind-BindingValue="model.IOTHUB_HUB_CONN_STRING"  PropertyName="IOTHUB_HUB_CONN_STRING"  />
-<HubValue @bind-BindingValue="model.SERVICE_CONNECTION_STRING"  PropertyName="SERVICE_CONNECTION_STRING"  />
-<HubValue @bind-BindingValue="model.EVENT_HUBS_CONNECTION_STRING"  PropertyName="EVENT_HUBS_CONNECTION_STRING"  />
-<HubValue @bind-BindingValue="model.SHARED_ACCESS_KEY_NAME"  PropertyName="SHARED_ACCESS_KEY_NAME"  />
-<HubValue @bind-BindingValue="model.HUB_NAME"  PropertyName="HUB_NAME"  /> 
-<HubValue @bind-BindingValue="model.DEVICE_NAME"  PropertyName="DEVICE_NAME"  />
-<HubValue @bind-BindingValue="model.SYMMETRIC_KEY"  PropertyName="SYMMETRIC_KEY"  />
-<HubValue @bind-BindingValue="model.EVENT_HUBS_SAS_KEY"  PropertyName="EVENT_HUBS_SAS_KEY"  />
-<HubValue @bind-BindingValue="model.EVENT_HUBS_COMPATIBILITY_PATH"  PropertyName="EVENT_HUBS_COMPATIBILITY_PATH"  />
-<HubValue @bind-BindingValue="model.EVENT_HUBS_COMPATIBILITY_ENDPOINT"  PropertyName="EVENT_HUBS_COMPATIBILITY_ENDPOINT"  />
-</table>
-</EditForm>
+            <HubValue @bind-BindingValue="model.DeviceGuid" PropertyName="DeviceGuid"  />
+            <HubValue @bind-BindingValue="model.IOTHUB_DEVICE_CONN_STRING"  PropertyName="IOTHUB_DEVICE_CONN_STRING"  />
+            <HubValue @bind-BindingValue="model.IOTHUB_HUB_CONN_STRING"  PropertyName="IOTHUB_HUB_CONN_STRING"  />
+            <HubValue @bind-BindingValue="model.SERVICE_CONNECTION_STRING"  PropertyName="SERVICE_CONNECTION_STRING"  />
+            <HubValue @bind-BindingValue="model.EVENT_HUBS_CONNECTION_STRING"  PropertyName="EVENT_HUBS_CONNECTION_STRING"  />
+            <HubValue @bind-BindingValue="model.SHARED_ACCESS_KEY_NAME"  PropertyName="SHARED_ACCESS_KEY_NAME"  />
+            <HubValue @bind-BindingValue="model.HUB_NAME"  PropertyName="HUB_NAME"  /> 
+            <HubValue @bind-BindingValue="model.DEVICE_NAME"  PropertyName="DEVICE_NAME"  />
+            <HubValue @bind-BindingValue="model.SYMMETRIC_KEY"  PropertyName="SYMMETRIC_KEY"  />
+            <HubValue @bind-BindingValue="model.EVENT_HUBS_SAS_KEY"  PropertyName="EVENT_HUBS_SAS_KEY"  />
+            <HubValue @bind-BindingValue="model.EVENT_HUBS_COMPATIBILITY_PATH"  PropertyName="EVENT_HUBS_COMPATIBILITY_PATH"  />
+            <HubValue @bind-BindingValue="model.EVENT_HUBS_COMPATIBILITY_ENDPOINT"  PropertyName="EVENT_HUBS_COMPATIBILITY_ENDPOINT"  />
+        </table>
 
-<textarea rows="@Rows" cols="@Cols"
-          @bind-value="@model.Txt"
-          @bind-value:event="oninput" />
 
-  
-<button class="btn btn-secondary" @onclick="Save">Save</button>
-<button class="btn btn-secondary" @onclick="Paste">Paste</button>
+        <textarea rows="@Rows" cols="@Cols"
+              @bind-value="@model.Txt"
+              @bind-value:event="oninput" />
+     </EditForm>
+}
+
+
+    <button class="btn btn-secondary" @onclick="Paste">Paste</button>
+    <button class="btn btn-secondary" @onclick="ScanTxt">Scan</button>
+    <button class="btn btn-secondary" @onclick="Json">From Json</button>
+    <button class="btn btn-secondary" @onclick="Register">Register</button>
+<br />@((MarkupString)Response)
+<br /> <button class="btn btn-secondary" @onclick="Toggle">Toggle Telemetry Send Mode</button>
+<br />@((MarkupString)Mode)
 
 @code {
 
     int Rows = 1;
     int Cols = 100;
-    public static BlazorIoTBridge.Shared.Parameters parameters;
+    public static Parameters parameters;
 
-    public static Info model { get; set; }
+    public Info model { get; set; }
+    public string Response = "";
 
-    public class Info
+
+    public async Task Register()
     {
-        public string DeviceGuid { get; set; } = "";
-        public string HUB_NAME { get; set; } = "";
-        public string DEVICE_NAME  { get; set; } = "";
-        public string SHARED_ACCESS_KEY_NAME { get; set; } = "iothubowner";
+            var response = await client.PostAsJsonAsync<Info>("Info", model, null);
 
-        public string IOTHUB_DEVICE_CONN_STRING { get; set; } = "";
-        public string IOTHUB_HUB_CONN_STRING { get; set; } = "";
-        public string SERVICE_CONNECTION_STRING { get; set; } = "";
-
-
-        public string SYMMETRIC_KEY { get; set; } = "";
-
-        public string EVENT_HUBS_CONNECTION_STRING { get; set; } = "";
-        public string EVENT_HUBS_COMPATIBILITY_PATH {get; set;} = "";
-        public string EVENT_HUBS_SAS_KEY { get; set; } = "";
-        public string EVENT_HUBS_COMPATIBILITY_ENDPOINT { get; set; } = "";
-
-        public string Txt { get; set; } = "";
-
+            var json = JsonConvert.SerializeObject(model, Formatting.None);
+            
+            string content = ""; // await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                System.Diagnostics.Debug.WriteLine("Sent OK");
+                Response = $"Sent Settings Ok<br/>{content}";
+            }
+            else
+            {
+                content = response.ReasonPhrase;
+                System.Diagnostics.Debug.WriteLine("Not OK: {0}", response.ReasonPhrase);
+                Response = $"Not OK: {(int)response.StatusCode}";
+                Response += $"<br/>{content}";
+            }
     }
 
-  public  void  Save()
-  {
+    public  void  ScanTxt()
+    {
         parameters = new  BlazorIoTBridge.Shared.Parameters();
         //model = new Info();
         using (StringReader sr = new StringReader(model.Txt))
@@ -82,6 +92,7 @@ Welcome to your new app.
                 line = line.Trim();
                 if (!string.IsNullOrEmpty(line))
                 {
+                    // Remove number at start
                     string[] parts = line.Split(":");
                     if (parts.Length < 2)
                         continue;
@@ -102,7 +113,7 @@ Welcome to your new app.
                             if (!string.IsNullOrEmpty(val))
                             {
                                 System.Diagnostics.Debug.WriteLine("{0} {1}", name, val);
-                                switch (name)
+                                switch (name.ToUpper())
                                 {
                                      case "DEVICE_GUID":
                                         model.DeviceGuid = val;
@@ -119,7 +130,7 @@ Welcome to your new app.
                                     case "IOTHUB_DEVICE_CONN_STRING":
                                         model.IOTHUB_DEVICE_CONN_STRING = val;
                                         break;
-                                     case "IOTHUB_CONN_STRING_CSHARP":
+                                     case "IOTHUB_HUB_CONN_STRING":
                                         model.IOTHUB_HUB_CONN_STRING = val;
                                         break;
                                      case "SERVICE_CONNECTION_STRING":
@@ -129,7 +140,7 @@ Welcome to your new app.
                                         model.EVENT_HUBS_COMPATIBILITY_PATH = val;
                                         break;        
                                      case "EVENT_HUBS_COMPATIBILITY_ENDPOINT":
-                                        model.EVENT_HUBS_COMPATIBILITY_ENDPOINT = val;
+                                        model.EVENT_HUBS_COMPATIBILITY_ENDPOINT	 = val;
                                         break;
                                       case "EVENT_HUBS_SAS_KEY":
                                         model.EVENT_HUBS_SAS_KEY = val;
@@ -155,17 +166,70 @@ Welcome to your new app.
         parameters.EventHubName = model.HUB_NAME;
         parameters.SharedAccessKey = model.SHARED_ACCESS_KEY_NAME;
         BlazorIoTBridge.Shared.Parameters._Parameters = parameters;
+        StateHasChanged();
   }
 
   public async Task Paste()
   {
+        if (model == null)
+            model = new Info();
         model.Txt = await JSRuntime.InvokeAsync<string>("clipboardCopy.readText");
+        StateHasChanged();
   }
+
+    public void Json()
+    {
+        string json = model.Txt;
+        model = new Info();
+        //    string json = JsonConvert.SerializeObject(model, Formatting.Indented);
+        var model1 = JsonConvert.DeserializeObject<Info>(json);
+        model.DeviceGuid = model1.DeviceGuid;
+        StateHasChanged();
+    }
+
+
+    bool IsDirectMode = false;
+
+    string Mode {
+        get
+        {
+            if (IsDirectMode)
+                return "Send Telemetry direct to hub";
+            else
+                return "Send Telemetry via this service";
+
+        }
+    }
+  
+  public async Task Toggle()
+  {
+        string command = "Send Telemetry direct to hub";
+        IsDirectMode = !IsDirectMode;
+        if (!IsDirectMode)
+            command = "Send Telemetry via here";
+        var cmd = new Command { Id = model.DeviceGuid, Action = command };
+        var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("Commands2Device", cmd, null);
+
+  }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (firstRender)
+        {
+            ScanTxt();
+        }
+  
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        //model = new Info();
+        //model.DeviceGuid = "6513d5ed-c0f2-4346-b3fa-642c48fd66a5";
         model = new Info();
+        model.Txt = "";
+        StateHasChanged();
 
     }
 

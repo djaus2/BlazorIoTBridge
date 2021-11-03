@@ -189,7 +189,7 @@ else
                                 {
                                     // Skip null integers. -1 is used as Json value can't be null
                                     double vald = (double)property.Value;
-                                    if (vald == Sensor.iNull)
+                                    if (vald == Sensor.dNull)
                                         continue;
                                 }
                                 Log(telemetryMsg,property.Key, property.Value, property.Value.GetType()); //, property.Value.GetType()); //, property.Value.GetType());

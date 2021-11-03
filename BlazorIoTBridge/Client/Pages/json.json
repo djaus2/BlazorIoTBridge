@@ -1,0 +1,17 @@
+{
+  "DeviceGuid": "6513d5ed-c0f2-4346-b3fa-642c48fd66a5",
+  "Id": "6513d5ed-c0f2-4346-b3fa-2c48fd66a5",
+  "HUB_NAME": "PnPHub4",
+  "DEVICE_NAME": "PnPDev4",
+  "SHARED_ACCESS_KEY_NAME": "iothubowner",
+  "IOTHUB_DEVICE_CONN_STRING": "HostName=PnPHub4.azure-devices.net;DeviceId=PnPDev4;SharedAccessKey=EHU9AXAaVtmYknqqzp6HFIrhZhTbtIhpoTSFxVAm5GM=",
+  "IOTHUB_HUB_CONN_STRING": "HostName=PnPHub4.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=qJmy/QM41wN+gXqi75azebWM57f4Jusm+SIny/+NkXw=",
+
+ "SERVICE_CONNECTION_STRING": "HostName=PnPHub4.azure-devices.net;SharedAccessKeyName=service;SharedAccessKey=l6z5TzRQvJK+hVELXWhlbyWEBLuBX1VBi+SVC2t+LGI=",
+  "EventHubsCompatiblePath": "pnphub4",
+  "EVENT_HUBS_CONNECTION_STRING": "Endpoint=sb://iothub-ns-pnphub4-14855393-855d540dfb.servicebus.windows.net/;SharedAccessKeyName=iothubowner;SharedAccessKey=qJmy/QM41wN+gXqi75azebWM57f4Jusm+SIny/+NkXw=;EntityPath=pnphub4",
+  "EVENT_HUBS_SAS_KEY"  : "qJmy/QM41wN+gXqi75azebWM57f4Jusm+SIny/+NkXw=",
+  "EntityPath": "pnphub4",
+  "REMOTE_HOST_NAME": "localhost",
+  "REMOTE_PORT": 2222
+}

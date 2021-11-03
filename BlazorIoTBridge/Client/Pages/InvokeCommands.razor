@@ -4,17 +4,34 @@
 @inject HttpClient client
 @inject IJSRuntime JSRuntime
 
-<h1>Invoke Commands on Device via the Hub</h1>
 
-@*<button class="btn btn-primary" @onclick="StartReads">Send Command</button><br />
-Command:&nbsp;<input type="text" @bind="@command"/><br />
-Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
+<h1>Commands</h1>
+<table style="width:100%;">
+	<col style="width:25%">
+	<col style="width:50%">
+    <col style="width:25%">
+    <tr><td><button class="btn btn-primary" @onclick="DoCommand">Send Command:</button></td></tr>
+    <tr><td>Enter Device Id as a Guid:&nbsp;</td><td colspan="2"><input type="text" style="width:320px;" @bind:event="oninput" @bind="@IdGuid"/></td></tr>
+    <tr><td><i>Or Select Device:&nbsp;</i></td>
+    <td colspan="2">
+        @if(@DeviceIds!= null)
+        {
+            @if (showmenu)
+            {
+                <select @onchange="OnSelectedId"  >
+                    <option value=""><i>Select</i></option>
+                        
+                    @foreach (var dev in DeviceIds)
+                    {
+                        <option value=@dev><b>@dev</b></option>
+                    }
+                </select>
+            }
+        }
+    </td></tr>
+     <tr><td>Enter Command:&nbsp;</td><td><input type="text" @onkeydown="@Enter" @bind="@command"/></td></tr>
 
-<table>
-    <tr><td colspan="2"><button class="btn btn-primary" @onclick="DoCommand">Send Command:</button></td></tr>
-     <tr><td>Type Command:&nbsp;</td><td><input type="text"  @onkeydown="@Enter" @bind:event="oninput" @bind="@command"/></td></tr>
-     <tr>
-        <td>Or Select Command:&nbsp;</td>
+     <tr><td><i>Or Select Command:&nbsp;</i></td>
        <td>
            @if(@RegCmdz!= null)
             {
@@ -26,53 +43,45 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
                         @foreach (var cmd in RegCmdz)
                         {
                             <option value=@cmd><b>@cmd</b></option>
-                        }                  
-
+                        }
                     </select>
                 }
             }
-       </td>
-   </tr>
+       </td></tr>
       <tr><td>Parameter:&nbsp;</td><td><input type="text" @bind="@value"/></td></tr>
 
         <tr><td colspan="2"><button class="btn btn-primary" @onclick="GetRegisteredCommands">Get Registered Commands for Device/button</button></td></tr>
 </table>
 
 <br />@((MarkupString)Response)
-<br />
-<tabls>
-    <tr>
-        <td>
-        @if (commands != null) 
-            {
-                @if (commands.Count() != 0)
-                {
-                    <h3>Log of Commands Queue direct to Device</h3>
-                    <table class="t1">
-                        <tr>
-                        <th>Action</th>
-                        <th>Parameter</th>
-                        </tr>
-                    @foreach (var @cmd in commands)
+
+@if (commands != null)
+{
+    @if (commands.Count() != 0)
+    {
+        <h3>Commands Queue direct to Device</h3>
+        <table class="t1">
+            <tr>
+            <th>Action</th>
+            <th>Parameter</th>
+            </tr>
+        @foreach (var @cmd in @commands)
+        {
+             <tr>
+                 <td>@cmd.Action</td>
+                    @if (cmd.Parameter != iNull )
                     {
-                         <tr>
-                             <td>@cmd.Action</td>
-                                @if (cmd.Parameter != iNull )
-                                {
-                                    <td>@cmd.Parameter</td>
-                                }
-                                else
-                                {
-                                    <td>&nbsp;</td>
-                                }
-                        </tr>
+                        <td>@cmd.Parameter</td>
                     }
-                    </table>
-                }
-            }         
-        </td>
-    </tr>
-</tabls>
+                    else
+                    {
+                        <td>&nbsp;</td>
+                    }
+            </tr>
+        }
+        </table>
+    }
+}
 
 
 @code {
@@ -84,15 +93,20 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
     private string value { get; set; } = "10";
     bool run = true;
     string Response = "";
-    private bool showmenu = true;
 
-    System.Threading.Timer timer;
+
+
     List<Command> commands = null;
     List<Command> commandsWaiting = null;
 
-    int iNull = (int)BlazorIoTBridge.Shared.Sensor.iNull;
+    int iNull = Sensor.iNull;
     string RegisteredCommands;
     List<string> RegCmdz = null;
+    bool showmenu = true;
+    private string IdGuid = "";
+    List<Guid> DeviceIds = null;
+
+    System.Threading.Timer timer;
 
     public async Task Enter(KeyboardEventArgs e)
     {
@@ -113,6 +127,10 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
             await DoCommand();
         }
     }
+    async Task OnSelectedId(ChangeEventArgs e)
+    {
+        IdGuid = e.Value.ToString();
+    }
 
     private async Task DoCommand()
     {
@@ -120,15 +138,16 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
             return;
         Response = "Busy";
         StateHasChanged();
-        BlazorIoTBridge.Shared.Command cmd;
+        Command cmd=null;
 
         int val;
 
         if (command[0] == '*')
         {
+            //command = command.Substring(1);
             //Commands that require a parameter have a leading * in name.
             if (int.TryParse(value, out val))
-                cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
+                cmd = new Command { Id = IdGuid, Action = command, Parameter = val };
             else
             {
                 await JSRuntime.InvokeVoidAsync("alert", new string[] { "Command requires a parameter" });
@@ -139,9 +158,9 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
         {         
             // Some commands have an optional parameter 
             if (int.TryParse(value, out val))
-                cmd = new BlazorIoTBridge.Shared.Command { Action = command, Parameter = val };
+                cmd = new Command { Id = IdGuid, Action = command, Parameter = val };
             else
-                cmd = new BlazorIoTBridge.Shared.Command { Action = command };
+                cmd = new Command { Id = IdGuid, Action = command };
         }
         if (cmd != null)
         {
@@ -254,6 +273,12 @@ Parameter:&nbsp;<input type="text" @bind="@value"/> <br />*@
         var response = await client.PostAsJsonAsync<BlazorIoTBridge.Shared.Command>("CommandsViaHub", cmd,null);
         RegisteredCommands = await response.Content.ReadAsStringAsync();
         RegCmdz = RegisteredCommands.Split(',').ToList<string>();
+        
+        var DeviceIdsArray = await client.GetFromJsonAsync<Guid[]>("Info");
+        DeviceIds = new List<Guid>(DeviceIdsArray);
+        if (DeviceIds != null)
+            if (DeviceIds.Count() == 1)
+                IdGuid = DeviceIds[0].ToString();
         StateHasChanged();
     }
 

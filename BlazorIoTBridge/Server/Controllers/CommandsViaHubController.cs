@@ -34,20 +34,21 @@ namespace BlazorIoTBridge.Server.Controllers
 
         private readonly IDataAccessService dataservice;
 
-  
+        private readonly ApplicationDBContext _context;
 
-        public CommandsViaHubController(AppSettings _appsettings, IDataAccessService _dataservice)
+        public CommandsViaHubController(ApplicationDBContext context, AppSettings _appsettings, IDataAccessService _dataservice)
         {
             this.appsettings = _appsettings;
             this.dataservice = _dataservice;
             if (Callbacks == null)
             Callbacks = new Dictionary<string, Sensor.CommandCallback>();
+            _context = context;
         }
 
         //public async Task CallBack2Device(string cmd, int param)
         //{
         //    Shared.Command command;
-        //    if (param != -2147483648)
+        //    if (param != Sensor.NULL)
         //    {
         //        System.Diagnostics.Debug.WriteLine($"TestCallBack was called with command: {cmd} param: {param}.");
         //        command = new Command { Action = cmd, Parameter = param, Invoke = false };
@@ -122,6 +123,11 @@ namespace BlazorIoTBridge.Server.Controllers
                 //}
                 else
                 {
+                    var infos = _context.Infos.ToList<Info>();
+                    var settings = from s in infos select s;
+                    Info info = null;
+                    if (settings.Count()!= 0)
+                        info = settings.FirstOrDefault();
 
                     // // This goes up to the hub and comes back here to the Callback via the Listener
                     // if ((!SimulatedDevicewithCommands.Client4Commands.IsRunning))
@@ -129,15 +135,25 @@ namespace BlazorIoTBridge.Server.Controllers
                     //     return NotFound($"{ cmd.Action} : Device Command Listener has not been started. Use \"StartListening\" command.");
                     // }
                     //else if (!Callbacks.Keys.Contains(cmd.Action))
-                    if(!cmds.Contains(cmd.Action))
+                    if (!cmds.Contains(cmd.Action))
                         return NotFound($"{ cmd.Action} : Listener not listening for that command.");
-                    string command_string = this.appsettings.SERVICE_CONNECTION_STRING;
-                    int res = await InvokeDeviceMethod.InvokeDeviceMethodLib.Main(new string[] { command_string, cmd.Action, cmd.Parameter.ToString() });
-                    //return Ok($"Device command {cmd.Action} device issued.");
-                    string result = "{\"result\":\"Device Command Issued - {" + cmd.Action + "} Outcome:{" + ((int)res).ToString() + "}\"}";
-                    System.Diagnostics.Debug.WriteLine("\t\t\t" + result);
-                    
-                    return ObjectResult(res, result); // await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(result), res));
+                    if (Guid.TryParse(cmd.Id, out Guid guid))
+                    {
+                        if (info != null) { 
+                            string command_string = info.SERVICE_CONNECTION_STRING;
+                            //this.appsettings.SERVICE_CONNECTION_STRING;
+                            int res = await InvokeDeviceMethod.InvokeDeviceMethodLib.Main(new string[] { command_string, cmd.Action, cmd.Parameter.ToString() });
+                            //return Ok($"Device command {cmd.Action} device issued.");
+                            string result = "{\"result\":\"Device Command Issued - {" + cmd.Action + "} Outcome:{" + ((int)res).ToString() + "}\"}";
+                            System.Diagnostics.Debug.WriteLine("\t\t\t" + result);
+
+                            return ObjectResult(res, result); // await Task.FromResult(new MethodResponse(Encoding.UTF8.GetBytes(result), res));
+                        }
+                        else
+                            return BadRequest($"{cmd.Action} Id:{{{guid}}}: Device's hub settings not registered. See Settings Tab.");
+                    }
+                    else
+                        return BadRequest($"{cmd.Action} Id:\"{cmd.Id}\": Invalid Id in Command. Should have as Guid string.");
                 }
             }
             return BadRequest($"{cmd.Action} : Probably call to wrong controller. Try Commands2DeviceController");
@@ -179,6 +195,17 @@ namespace BlazorIoTBridge.Server.Controllers
             {
                 CommandNamesCsv = commandNamesCsv.Trim();
                 cmds = CommandNamesCsv.Split(',', StringSplitOptions.TrimEntries|StringSplitOptions.RemoveEmptyEntries).ToList <string>();
+                string IdGuid = cmds[0];
+                if (IdGuid.Length == 36)
+                {
+                    if (Guid.TryParse(IdGuid,out Guid guid))
+                    {
+                        cmds.RemoveAt(0);
+                        int i = CommandNamesCsv.IndexOf(',') + 1;
+                        CommandNamesCsv = CommandNamesCsv.Substring(i);
+                        dataservice.DeviceIds.Add(guid);
+                    }
+                }
                 if (cmds.Count() != 0)
                 {   
                     return Ok($"Device Comamnd device Listener added commands {commandNamesCsv}.");

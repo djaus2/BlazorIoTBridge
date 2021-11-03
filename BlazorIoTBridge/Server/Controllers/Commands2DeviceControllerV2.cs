@@ -18,13 +18,13 @@ namespace BlazorIoTBridge.Server.Controllers
     /// </summary>
     [ApiController]
     [Route("[controller]")]
-    public class Commands2DeviceController : ControllerBase
+    public class Commands2DeviceV2Controller : ControllerBase
     {
 
         private readonly AppSettings appsettings;
         private readonly IDataAccessService dataaccesssservice;
 
-        public Commands2DeviceController(AppSettings _appsettings, IDataAccessService _dataaccesservice)
+        public Commands2DeviceV2Controller(AppSettings _appsettings, IDataAccessService _dataaccesservice)
         {
             this.dataaccesssservice = _dataaccesservice;
             this.appsettings = _appsettings;
