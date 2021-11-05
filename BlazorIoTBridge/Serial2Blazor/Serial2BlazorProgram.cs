@@ -62,7 +62,7 @@ namespace Serial2Blazor_app
         static bool fwdTelemetrythruBlazorSvr = true;
 
         static  string IdGuid = "";
-        static Guid GuidId = new Guid();
+        static Guid GuidId = new Guid(); // Is in appsettings
 
         static Info info;
 
@@ -84,10 +84,10 @@ namespace Serial2Blazor_app
             //Blazor Svc
             _host = $@"{settings.Host}:{settings.Port}/";
 
-            string Id = settings.Id;
+            IdGuid = settings.Id;
             string infoController = (settings.InfoController).Replace("Controller","");
 
-            Guid GuidId = new Guid(Id);
+            GuidId = new Guid(IdGuid);
             using var client = new System.Net.Http.HttpClient();
             client.BaseAddress = new Uri(_host);
             IsRealDevice = settings.IsRealDevice;
@@ -115,7 +115,7 @@ namespace Serial2Blazor_app
                 Thread.Sleep(1000);
                 try
                 {
-                    info = client.GetFromJsonAsync<Info>($"{infoController }/{Id}", null).GetAwaiter().GetResult();
+                    info = client.GetFromJsonAsync<Info>($"{infoController }/{IdGuid}", null).GetAwaiter().GetResult();
                     if (info == null)
                     {
                         found = false;
@@ -295,7 +295,7 @@ namespace Serial2Blazor_app
                     }
                 }
 
-;
+
                 if (!fwdTelemetrythruBlazorSvr)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
@@ -388,7 +388,6 @@ namespace Serial2Blazor_app
             }
         }
 
-        private static int Id = 8; //"6513d5-c0f2-4346-b3fa-642c48fd66a5";
 
         /// <summary>
         /// Watch for Commands, sent from Hub via Blazor Svc
@@ -686,8 +685,9 @@ namespace Serial2Blazor_app
             _serialPort.WriteLine("RESET");
             // Wait for it
             Thread.Sleep(3000);
-            // Device expects an initial char to complete SetUp()
-            _serialPort.Write("*");
+            // Device expects an initial char to complete SetUp() and is Id
+            string idMsg = $"* {{{IdGuid}}}";
+            _serialPort.Write(idMsg);
             Monitor.Exit(_serialPort);
             Console.WriteLine("Device has been reset");
             while (true)
@@ -706,19 +706,6 @@ namespace Serial2Blazor_app
                         if (IsFirstSerialRead)
                         {
                             IsFirstSerialRead = false;
-                            continue;
-                        }
-                        else if (sensor[0] == '=')
-                        {
-                            if (sensor.Length == 36+2)
-                            {
-                                IdGuid = sensor.Substring(2);
-                                if (!Guid.TryParse(IdGuid, out GuidId))
-                                {
-                                    GuidId = new Guid();
-                                    IdGuid = "";
-                                }
-                            }
                             continue;
                         }
                         else if (sensor[0] == '~')
