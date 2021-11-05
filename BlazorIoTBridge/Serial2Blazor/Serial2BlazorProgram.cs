@@ -45,7 +45,7 @@ namespace Serial2Blazor_app
         static SerialPort _serialPort;
 
         static string _host = "https://localhost:44318/";
-        static int delay = 5;
+        //static int delay = 5;
         static bool isFirstRead = true;
         static string comport = "COM4";
         static int baudrate = 9600;
@@ -65,6 +65,7 @@ namespace Serial2Blazor_app
         static Guid GuidId = new Guid(); // Is in appsettings
 
         static Info info;
+        static int PauseSignalAfterCheck4Command = 3333;
 
 
 
@@ -183,7 +184,7 @@ namespace Serial2Blazor_app
 
 
 
-                delay = settings.Delay_Secs;
+                //delay = settings.Delay_Secs;
 
                 // COM Settings
                 comport = settings.ComPort;
@@ -257,13 +258,13 @@ namespace Serial2Blazor_app
                     }
                     settings.BaudRate = baudrate;
 
-                    Console.Write($"> \tTime (in sec) between reads: (Default:{delay}) ");
-                    string secs = Console.ReadLine();
-                    if (!int.TryParse(secs, out delay))
-                    {
-                        delay = settings.Delay_Secs;
-                    }
-                    settings.Delay_Secs = delay;
+                    //Console.Write($"> \tTime (in sec) between reads: (Default:{delay}) ");
+                    //string secs = Console.ReadLine();
+                    //if (!int.TryParse(secs, out delay))
+                    //{
+                    //    delay = settings.Delay_Secs;
+                    //}
+                    //settings.Delay_Secs = delay;
 
                     Console.Write($@"> Blazor Server URL:Port: (Default:{_host} ) ");
                     string newhost = Console.ReadLine();
@@ -502,7 +503,7 @@ namespace Serial2Blazor_app
                     Console.WriteLine(ex.Message);
                     Console.WriteLine("{0}", _host);
                 }
-                Thread.Sleep(3333);
+                Thread.Sleep(PauseSignalAfterCheck4Command);
             }
 
         }
@@ -931,38 +932,40 @@ namespace Serial2Blazor_app
     /// </summary>
     public class Settings
     {
-        public string UserDir { get; set; } 
+        public string UserDir { get; set; }                 // Keep saved copy of this there.
+        public string Id { get; set; }                      // A Unique Guid string for each device
+        public bool Auto { get; set; }                      // Just use settings without prompts
+        public string ComPort { get; set; }                 // The Arduino (USB) serial port
+        public int BaudRate { get; set; }                   // The Arduino Serial BaudRate
+        public string Host { get; set; }                    // Url for the Blazor Server
+        public uint Port { get; set; }                      // Blazor Server Port
+        public int WriteTimeout { get; set; }               // Serial Port Write TimeOut
+        public int ReadTimeout { get; set; }                // Serial Port Read Timeout
+        public string ACK { get; set; }                     // Message sent back to device upon reception of a message
+        public string InitialMessage { get; set; }          // Displayed at start
 
-        public string Id { get; set; }
+        public string InfoController { get; set; }          // Will be "InfoCController "Info" gets used for Get/Post
+        public string ReadCommandsController { get; set; }  // Will be "Commands2DeviceController" "Commands2Device" is used in Get/Post
+        public string SensorController { get; set; }        // Will be "SensorController" "Sensor" is used for Get/Post
 
-        public string InfoController { get; set; }
+        public bool IsRealDevice { get; set; }              // If true then use Arduino serially. If false use simulation here
 
-        public bool FwdTelemetrythruBlazorSvr { get; set; }
-        public bool Auto { get; set; }
-        public string ComPort { get; set; }
-        public int BaudRate { get; set; }
-        public int Delay_Secs { get; set; }
-        public string Host { get; set; }
-        public uint Port { get; set; }
-        public int WriteTimeout { get; set; }
-        public int ReadTimeout { get; set; }
-        public string ACK { get; set; }
-        public string InitialMessage { get; set; }
+        public string CommandsIfIsSimDevice { get; set; }   // CSV list of commands from here. Note if real device then that sends the list
 
-        public string ReadCommandsController { get; set; }
-        public string SensorController { get; set; }
+        public int defaultTimeout { get; set; }             // A initial period for sending Telemetry if simulating
 
-        public bool IsRealDevice { get; set; }
-
-        public string CommandsIfIsSimDevice { get; set; }
-
-        public int defaultTimeout { get; set; }
+        public int PauseSignalAfterCheck4Command { get; set; }  // The pause of the Signal thread after completeing a command check/action. 
+                                                                // This thread polls for Direct Commands from the Svc
+                                                                // Nb: The larger this the longer a command may take before actioned
+                                                                // Shorter means its busier.
+                                                                // No impact upon commands direct from the Hub                                                           
     }
 
 
     /// <summary>
     /// Loaded from appsettings.json in user area (eg c:\temp) 
-    /// Can be saved after making COM etc selecxtions at start.
+    /// If not there then appsettings in app location used.
+    /// Can be saved after making COM etc selections at start.
     /// </summary>
     public class App_Settings
     {
