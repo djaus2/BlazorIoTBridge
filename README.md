@@ -1,6 +1,7 @@
 # BlazorIoTBridge
 
-### Version: 1.00
+### Version: 2.00 (Beta)
+**NB: _THERE HAVE BEEN SOME SIGNIFICANT UNDOCUMENTED CHANGES SUCH AS SETTINGS IN A DATABASE THAT IS QUERIED USING A GUID AS AN ID._ WATCH THIS SPACE**
 
 ## Background
 This is a  .Net 5 version update of
