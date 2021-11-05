@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
 namespace BlazorIoTBridge.Shared
@@ -8,15 +9,18 @@ namespace BlazorIoTBridge.Shared
     public class Info
     {
         [Key]
-        public string DeviceGuid { get; set; } 
-        public Guid Id {
-            get {
-                if (Guid.TryParse(DeviceGuid, out Guid guid))
-                    return guid;
-                else
-                    return Guid.Empty;
-            }
+        public Guid Id { get; set; }
+
+        [NotMapped]
+        public string DeviceGuid
+        {
+            get { return Id.ToString(); }
+            set { if (Guid.TryParse(value, out Guid guid))
+                    Id = guid; }
         }
+
+
+        public bool FwdTelemetrythruBlazorSvr { get; set; }
         public string HUB_NAME { get; set; } = "";
         public string DEVICE_NAME { get; set; } = "";
         public string SHARED_ACCESS_KEY_NAME { get; set; } = "iothubowner";

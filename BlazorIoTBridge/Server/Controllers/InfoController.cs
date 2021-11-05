@@ -90,18 +90,29 @@ namespace BlazorIoTBridge.Server.Controllers
                         info2 = set.FirstOrDefault();
                     if (info2 == null)
                     {
-                        _context.Add(info);
+                        _context.Add<Info>(info);
                         await _context.SaveChangesAsync();
                         //dataservice.Devices.Add(info.Id, new Data.Device(info.Id, info));
                         return Ok();
                     }
-                    return Ok();
+                    else
+                    {
+                        _context.ChangeTracker.Clear();
+                        await Update(info);
+                        return Ok();
+                    }
                 }
                 return Ok();
             } catch (Exception ex)
             {
                 return Ok();
             }
+        }
+
+        public async Task Update(Info info)
+        {
+            _context.Update<Info>(info);
+            await _context.SaveChangesAsync();
         }
 
     }

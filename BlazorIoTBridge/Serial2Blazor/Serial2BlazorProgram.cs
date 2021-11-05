@@ -179,7 +179,7 @@ namespace Serial2Blazor_app
                 IsRealDevice = settings.IsRealDevice;
 
                 // Forward telemetry via Blazor Svc or direct to hub from here
-                fwdTelemetrythruBlazorSvr = settings.FwdTelemetrythruBlazorSvr;
+                fwdTelemetrythruBlazorSvr = info.FwdTelemetrythruBlazorSvr;
 
 
 

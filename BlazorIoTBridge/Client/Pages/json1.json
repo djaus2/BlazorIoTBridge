@@ -11,5 +11,5 @@
   "EVENT_HUBS_COMPATIBILITY_PATH": "pnphub4",
   "EVENT_HUBS_SAS_KEY": "qJmy/QM41wN+gXqi75azebWM57f4Jusm+SIny/+NkXw=",
   "EVENT_HUBS_COMPATIBILITY_ENDPOINT": "sb://iothub-ns-pnphub4-14855393-855d540dfb.servicebus.windows.net/",
-  "Txt": "ABC"
+  "FwdTelemetrythruBlazorSvr": false
 }
