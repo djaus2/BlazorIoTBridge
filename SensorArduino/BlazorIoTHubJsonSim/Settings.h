@@ -1,4 +1,6 @@
-#define Id  "6513d5-c0f2-4346-b3fa-642c48fd66a5"
+//#define Id  "6513d5ed-c0f2-4346-b3fa-642c48fd66a5"
+// Id is now sent to gere as a string enclosed in braces at start.
+// eg * {6513d5ab-c0f2-4346-b3fa-642c48fd66a5} as first message.
 
 
 //Delay after POST done in seconds

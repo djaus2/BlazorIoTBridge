@@ -18,6 +18,7 @@ void(* resetFunc) (void) = 0;
 String command="";
 String readString;
 String previousCommand="";
+String Id;
 bool g_gotLastAck = false; // Receiver needs to send back "ACK" once sent and/or recieved by IoT Hub
 
 uint32_t g_SampleRate = 3000;      // Delay between Telemetries 
@@ -30,12 +31,39 @@ bool waitingForAck = false;
 void setup() {
     delay(3000);
     Serial.begin(BAUD);
-    
+        Id = "";
     // Receiver must send some initial character/s:
+    // * <Guid string>
+    char c;
     while (Serial.available()==0);
-    char    c = (char)Serial.read();
-     while (Serial.available() >0)
+    delay(SERIAL_BUFFER_FILL_PAUSE);
+
+    // Expect '*'
+    do {
+      c = (char)Serial.read();
+    } while (c != '*');
+
+    // Expect opening brace
+    do {
+      c = (char)Serial.read();
+    } while (c != '{');
+
+   // Get Id a Guid string
+   int cntr = 0;
+   do{
+     while ((Serial.available() >0) && (cntr!=36))
+     {  
+        delay(SERIAL_BUFFER_FILL_PAUSE); 
         c = (char)Serial.read();
+        Id += c;
+        cntr++;
+     }
+  } while (cntr != 36); // Could check if its a Guid here ??
+
+    // Expect closing brace
+    do {
+      c = (char)Serial.read();
+    } while (c != '}');
         
     Serial.println(INITIAL_MESSAGE);
     Count =0;
@@ -46,6 +74,8 @@ void setup() {
     Serial.print("* Initial Rate: ");
     Serial.println(g_SampleRate);
     Serial.println("* Valid Commands (Case insensitive) sent as Json string: ");
+    Serial.print("* Id for this device: ");
+    Serial.println(Id);
     Serial.print("# ");
     Serial.println(COMMAND_LIST);
     Serial.println("* Rate requires a parameter in mSec");
@@ -153,7 +183,7 @@ do{
           command=newCommand;
           readString ="";
           newCommand = "";
-          if (val != 0)
+          if (val != -1)
           { 
             Serial.print("* Command (int) parameter is:");
             Serial.println(val);
@@ -266,7 +296,7 @@ do{
             }
             else
             {              
-              Serial.println("Set for continuous telemetry sends.");
+              Serial.println("* Set for continuous telemetry sends.");
               counter = -1;
             }
             Serial.print("* Rate: ");
@@ -275,7 +305,7 @@ do{
             command="READ";
             g_gotLastAck = true;
           }     
-          else if (command.equalsIgnoreCase("*RATE"))
+          else if (command.equalsIgnoreCase("RATE"))
           {
             if ((val>=1000)&& (val<= 10000))
             {
@@ -315,7 +345,7 @@ do{
     g_gotLastAck = false;
     String postData;
     // Note that for Serial, the data gets sent in DoSensor()
-    postData = DoSensor(Count);
+    postData = DoSensor(Count,Id);
     Count++;
     if (Count >6)
       Count=0;

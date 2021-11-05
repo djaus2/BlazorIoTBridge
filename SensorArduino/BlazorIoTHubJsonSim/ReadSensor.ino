@@ -6,7 +6,7 @@
 // Call ReadSensor and Json Serialize the Sensor data
 // If sent over RS232, then is sent here.
 // If Ethernet then is sent when passed back
-String DoSensor(int sensorNo)
+String DoSensor(int sensorNo, String id)
 { 
   ObjectDoc.clear();
   String postData;
@@ -70,6 +70,8 @@ String GetAction(String json, int * parameter)
 
   // Test if parsing succeeds.
   if (error) {
+    Serial.print("* ");
+    Serial.println(json);
     Serial.print(F("* deserializeJson() failed: "));
     Serial.println(error.f_str());
     return;
