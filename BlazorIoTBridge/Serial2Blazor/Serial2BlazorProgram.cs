@@ -753,6 +753,7 @@ namespace Serial2Blazor_app
         public static async Task SendSensor(string sensorJson)
         {
             Sensor sensor = JsonConvert.DeserializeObject<Sensor>(sensorJson);
+            sensor.TimeStamp = DateTime.Now.Ticks;
 
             try
             {

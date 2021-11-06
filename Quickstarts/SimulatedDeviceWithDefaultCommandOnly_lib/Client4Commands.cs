@@ -69,8 +69,15 @@ namespace SimulatedDeviceWithDefaultCommandOnly
         public static async Task<bool> StartSendDeviceToCloudMessageAsync(Sensor Sensor, string deviceConnectionString)
         {
             System.Diagnostics.Debug.WriteLine("===== SendDeviceToCloudMessageAsync In =====");
-            var messageString = JsonConvert.SerializeObject(Sensor);
-            var message = new Message(Encoding.ASCII.GetBytes(messageString));
+            var messageString = JsonConvert.SerializeObject(Sensor, Formatting.None,
+                    new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
+            int postDateTime = messageString.IndexOf("DateTime");
+            messageString = messageString.Substring(0, postDateTime - 2) + '}';
+            var message = new Message(Encoding.UTF8.GetBytes(messageString))
+            {
+                ContentEncoding = "utf-8",
+                ContentType = "application/json"
+            };
             s_connectionString = deviceConnectionString;// "HostName=PnPHub4.azure-devices.net;DeviceId=PnPDev4;SharedAccessKey=EHU9AXAaVtmYknqqzp6HFIrhZhTbtIhpoTSFxVAm5GM=";
             if (s_deviceClient == null)
                 s_deviceClient = DeviceClient.CreateFromConnectionString(s_connectionString, s_transportType);

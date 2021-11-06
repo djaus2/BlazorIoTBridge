@@ -39,8 +39,12 @@ namespace BlazorIoTBridge.Server.Controllers
         public async Task<bool> StartSendDeviceToCloudMessageAsync(Sensor Sensor)
         {
             var messageString = JsonConvert.SerializeObject(Sensor);
-            var message = new Message(Encoding.ASCII.GetBytes(messageString));
-
+            var message = new Message(Encoding.UTF8.GetBytes(messageString))
+            {
+                ContentEncoding = "utf-8",
+                ContentType = "application/json"
+            };
+            //message.ComponentName =??Nor relevant hewre
             // Add a custom application property to the message.
             // An IoT hub can filter on these properties without access to the message body.
             //message.Properties.Add("temperatureAlert", (currentTemperature > 30) ? "true" : "false");
